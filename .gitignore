@@ -43,3 +43,8 @@ coverage/
 *.key
 *.mobileprovision
 *.pem
+
+#개인적 추가
+*.log
+dist/
+build/
