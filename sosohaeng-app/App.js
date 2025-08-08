@@ -5,7 +5,7 @@ import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Screens
 import HomeScreen from './screens/HomeScreen';
@@ -24,12 +24,13 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 /* --------------------- 커스텀 탭바 (전체폭) --------------------- */
-function CustomTabBar({ state, navigation }) {
+// ⚠️ 이름을 CustomTabBarComp로 바꿔 충돌 방지
+function CustomTabBarComp({ state, navigation }) {
   const insets = useSafeAreaInsets();
 
   // 크기/여백 조절 포인트
   const TAB_HEIGHT = 50;                                   // 바 높이(안전영역 제외)
-  const INNER_BOTTOM_PAD = Math.max(12, insets.bottom+6);  // 내부 바닥 여백
+  const INNER_BOTTOM_PAD = Math.max(12, insets.bottom + 6); // 내부 바닥 여백
   const H_PADDING = 18;                                    // 좌우 내부 패딩
   const RADIUS = 20;                                       // 윗모서리 라운드
 
@@ -39,7 +40,7 @@ function CustomTabBar({ state, navigation }) {
 
   const focusedRouteName = state.routes[state.index].name;
 
-  const iconFor = (name, focused, size=22) => {
+  const iconFor = (name, focused, size = 22) => {
     const color = focused ? '#1f6feb' : '#9aa0a6';
     if (name === '추천') return <Ionicons name="sparkles-outline" size={size} color={color} />;
     if (name === '축제') return <MaterialCommunityIcons name="party-popper" size={size} color={color} />;
@@ -55,8 +56,8 @@ function CustomTabBar({ state, navigation }) {
       style={[
         styles.tabCard,
         {
-          left: 0,            // ← 화면 가로폭 전체
-          right: 0,           // ← 화면 가로폭 전체
+          left: 0,
+          right: 0,
           bottom: 0,
           height: TAB_HEIGHT + insets.bottom,
           paddingTop: 8,
@@ -71,7 +72,12 @@ function CustomTabBar({ state, navigation }) {
       {routes.slice(0, 2).map((r) => {
         const focused = focusedRouteName === r.name;
         return (
-          <TouchableOpacity key={r.key} style={styles.tabItem} activeOpacity={0.9} onPress={() => onPress(r.name)}>
+          <TouchableOpacity
+            key={r.key}
+            style={styles.tabItem}
+            activeOpacity={0.9}
+            onPress={() => onPress(r.name)}
+          >
             {iconFor(r.name, focused)}
             <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{r.name}</Text>
           </TouchableOpacity>
@@ -85,7 +91,12 @@ function CustomTabBar({ state, navigation }) {
       {routes.slice(2).map((r) => {
         const focused = focusedRouteName === r.name;
         return (
-          <TouchableOpacity key={r.key} style={styles.tabItem} activeOpacity={0.9} onPress={() => onPress(r.name)}>
+          <TouchableOpacity
+            key={r.key}
+            style={styles.tabItem}
+            activeOpacity={0.9}
+            onPress={() => onPress(r.name)}
+          >
             {iconFor(r.name, focused)}
             <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{r.name}</Text>
           </TouchableOpacity>
@@ -100,8 +111,8 @@ function Tabs() {
   return (
     <Tab.Navigator
       initialRouteName="홈"
-      screenOptions={{ headerShown: false }}
-      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false }}   // ✅ 네이티브 헤더 OFF (TopBackBar 사용)
+      tabBar={(props) => <CustomTabBarComp {...props} />} // ← 새 이름 사용
     >
       {/* 홈은 탭에 포함(버튼 숨김) */}
       <Tab.Screen name="홈" component={HomeScreen} options={{ tabBarButton: () => null }} />
@@ -127,7 +138,11 @@ function MainTabsWithFab({ navigation }) {
         onPress={() => navigation.navigate('Main', { screen: '홈' })}
         style={[styles.fab, { bottom: fabBottom }]}
       >
-        {FAB_ICON ? <Image source={FAB_ICON} style={styles.fabIcon} /> : <Ionicons name="home" size={26} color="#fff" />}
+        {FAB_ICON ? (
+          <Image source={FAB_ICON} style={styles.fabIcon} />
+        ) : (
+          <Ionicons name="home" size={26} color="#fff" />
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -135,13 +150,17 @@ function MainTabsWithFab({ navigation }) {
 
 export default function App() {
   const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: '#ffffff' } };
+
   return (
-    <NavigationContainer theme={theme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Main" component={MainTabsWithFab} />
-        <Stack.Screen name="찜" component={FavoritesScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    // ✅ SafeAreaProvider로 감싸서 각 화면에서 useSafeAreaInsets() 정상 동작
+    <SafeAreaProvider>
+      <NavigationContainer theme={theme}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Main" component={MainTabsWithFab} />
+          <Stack.Screen name="찜" component={FavoritesScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 
