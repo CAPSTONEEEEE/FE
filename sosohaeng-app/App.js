@@ -13,6 +13,7 @@ import FestivalsScreen from './screens/FestivalsScreen';
 import RecommendHome from './screens/RecommendScreen/RecommendHome';
 import RandomRecommend from './screens/RecommendScreen/RandomRecommend';
 import ChatbotRecommend from './screens/RecommendScreen/ChatbotRecommend'; 
+import RandomResultScreen from './screens/RecommendScreen/RandomResult';
 import MarketScreen from './screens/MarketScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
@@ -118,6 +119,7 @@ function RecommendStackScreen() {
       <RecommendStack.Screen name="RecommendHome" component={RecommendHome} />
       <RecommendStack.Screen name="RandomRecommend" component={RandomRecommend} />
       <RecommendStack.Screen name="ChatbotRecommend" component={ChatbotRecommend} />
+      <RecommendStack.Screen name="RandomResult" component={RandomResultScreen} />
     </RecommendStack.Navigator>
   );
 }

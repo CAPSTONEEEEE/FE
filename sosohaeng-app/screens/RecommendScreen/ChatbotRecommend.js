@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Keyboard, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
 
-export default function ChatbotRecommend() {
-  const [messages, setMessages] = useState([]);
+export default function ChatbotRecommend({ navigation }) {
+  const [messages, setMessages] = useState([
+    { 
+      id: 0, 
+      text: '안녕하세요! 당신의 여행을 도와드릴 &&&입니다!\n\n### 문구 추가 예정 ###', 
+      user: 'chatbot', 
+      image: require('../../assets/icons/chatbot.png')
+    },
+  ]);
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
 
-  // 화면 로드 시 자동으로 키보드를 엽니다.
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
@@ -35,25 +41,37 @@ export default function ChatbotRecommend() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TopBackBar title="나에게 딱! 맞는 여행" />
-
-      {/* 메시지 목록을 표시하는 영역 */}
+    <View style={styles.container}>
+      <TopBackBar
+        title="나에게 딱! 맞는 여행"
+        right={
+          <TouchableOpacity
+            onPress={() => navigation.navigate('찜')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
+          </TouchableOpacity>
+        }
+      />
+      
       <ScrollView style={styles.messageList} contentContainerStyle={styles.messageListContent}>
         {messages.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageBubble,
-              message.user === 'user' ? styles.userBubble : styles.chatbotBubble,
-            ]}
-          >
-            <Text style={styles.messageText}>{message.text}</Text>
+          <View key={message.id} style={message.user === 'user' ? styles.userMessageRow : styles.chatbotMessageRow}>
+            {message.user === 'chatbot' && message.image && (
+              <Image source={message.image} style={styles.profileImage} />
+            )}
+            <View
+              style={[
+                styles.messageBubble,
+                message.user === 'user' ? styles.userBubble : styles.chatbotBubble,
+              ]}
+            >
+              <Text style={styles.messageText}>{message.text}</Text>
+            </View>
           </View>
         ))}
       </ScrollView>
 
-      {/* 키보드와 함께 움직이는 입력 창 */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
@@ -75,7 +93,7 @@ export default function ChatbotRecommend() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -91,18 +109,34 @@ const styles = StyleSheet.create({
   messageListContent: {
     justifyContent: 'flex-end',
   },
+  // 나의 메시지 행을 위한 스타일
+  userMessageRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 8,
+  },
+  // 챗봇 메시지 행을 위한 스타일
+  chatbotMessageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 8,
+    overflow: 'hidden',
+  },
   messageBubble: {
     padding: 12,
     borderRadius: 20,
-    marginBottom: 8,
     maxWidth: '80%',
   },
   userBubble: {
-    alignSelf: 'flex-end',
     backgroundColor: '#e1ffc7',
   },
   chatbotBubble: {
-    alignSelf: 'flex-start',
     backgroundColor: '#fff',
   },
   messageText: {
