@@ -10,7 +10,9 @@ import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-cont
 // Screens
 import HomeScreen from './screens/HomeScreen';
 import FestivalsScreen from './screens/FestivalsScreen';
-import RecommendScreen from './screens/RecommendScreen';
+import RecommendHome from './screens/RecommendScreen/RecommendHome';
+import RandomRecommend from './screens/RecommendScreen/RandomRecommend';
+import ChatbotRecommend from './screens/RecommendScreen/ChatbotRecommend'; 
 import MarketScreen from './screens/MarketScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
@@ -106,7 +108,20 @@ function CustomTabBarComp({ state, navigation }) {
   );
 }
 /* --------------------------------------------------------------- */
+// RecommendHome과 RandomRecommend를 위한 스택 내비게이터를 생성합니다.
+const RecommendStack = createNativeStackNavigator();
 
+// ✅ 새 스택 내비게이터 컴포넌트
+function RecommendStackScreen() {
+  return (
+    <RecommendStack.Navigator screenOptions={{ headerShown: false }}>
+      <RecommendStack.Screen name="RecommendHome" component={RecommendHome} />
+      <RecommendStack.Screen name="RandomRecommend" component={RandomRecommend} />
+      <RecommendStack.Screen name="ChatbotRecommend" component={ChatbotRecommend} />
+    </RecommendStack.Navigator>
+  );
+}
+/* --------------------------------------------------------------- */
 function Tabs() {
   return (
     <Tab.Navigator
@@ -116,7 +131,7 @@ function Tabs() {
     >
       {/* 홈은 탭에 포함(버튼 숨김) */}
       <Tab.Screen name="홈" component={HomeScreen} options={{ tabBarButton: () => null }} />
-      <Tab.Screen name="추천" component={RecommendScreen} />
+      <Tab.Screen name="추천" component={RecommendStackScreen} />
       <Tab.Screen name="축제" component={FestivalsScreen} />
       <Tab.Screen name="마켓" component={MarketScreen} />
       <Tab.Screen name="설정" component={SettingsScreen} />
