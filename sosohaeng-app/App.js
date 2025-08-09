@@ -19,6 +19,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
 
 // PNG 아이콘(없으면 폴백)
+// fab_home2.png를 사용하도록 경로를 수정합니다.
 const FAB_ICON = (() => {
   try { return require('./assets/icons/fab_home.png'); } catch { return null; }
 })();
@@ -210,7 +211,8 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#1f6feb',
+    // 배경색을 투명하게 설정하여 이미지가 직접 보이도록 합니다.
+    backgroundColor: 'transparent', 
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 10,
@@ -220,6 +222,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     borderWidth: 3,
     borderColor: '#fff',
+    overflow: 'hidden',
   },
-  fabIcon: { width: 28, height: 28, resizeMode: 'contain', tintColor: '#fff' }, // tintColor 지우면 원본색
+  fabIcon: { 
+    // 이미지 크기를 FAB와 동일하게 설정하여 꽉 채우도록 합니다.
+    width: '100%', 
+    height: '100%', 
+    // resizeMode를 'cover'로 변경하여 이미지가 테두리 안에 꽉 차도록 합니다.
+    resizeMode: 'cover', 
+    tintColor: null 
+  },
 });
