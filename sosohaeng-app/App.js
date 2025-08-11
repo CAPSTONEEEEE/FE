@@ -9,7 +9,6 @@ import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-cont
 
 // Screens
 import HomeScreen from './screens/HomeScreen';
-import FestivalsScreen from './screens/FestivalsScreen';
 import RecommendHome from './screens/RecommendScreen/RecommendHome';
 import RandomRecommend from './screens/RecommendScreen/RandomRecommend';
 import ChatbotRecommend from './screens/RecommendScreen/ChatbotRecommend'; 
