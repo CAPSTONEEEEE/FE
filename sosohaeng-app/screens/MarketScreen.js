@@ -14,9 +14,12 @@ import {
 } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import TopBackBar from '../components/TopBackBar';
-import { subscribe, isFavorite, toggleFavorite } from './stores/favoritesStore';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TopBackBar from '../components/TopBackBar';
+
+// ✅ 전역 찜 스토어 (경로 유지: screens/FavoritesStore.js)
+//   만약 /stores/favoritesStore.js 로 옮겼다면 아래 임포트 경로만 바꿔줘.
+import { subscribe, isFavorite, toggleFavorite } from './stores/favoritesStore';
 
 const Stack = createNativeStackNavigator();
 
@@ -72,22 +75,21 @@ const PRODUCTS = [
 const CATEGORY = 'market';
 const getImageSource = (img) => (typeof img === 'string' ? { uri: img } : img);
 const uniqLocations = [...new Set(PRODUCTS.map((p) => p.location))].sort();
-
 const priceMinAll = Math.min(...PRODUCTS.map((p) => p.price));
 const priceMaxAll = Math.max(...PRODUCTS.map((p) => p.price));
 
 const SORTS = [
-  { key: 'recommend', label: '추천순' },                  // 임시: 인기 가중치
-  { key: 'popular', label: '인기순' },                    // reviews DESC
-  { key: 'new', label: '최신순' },                        // createdAt DESC
-  { key: 'reviews', label: '후기순' },                    // reviews DESC
-  { key: 'ratingDesc', label: '별점높은순' },             // rating DESC
-  { key: 'ratingAsc', label: '별점낮은순' },              // rating ASC
-  { key: 'priceAsc', label: '낮은 가격순' },              // price ASC
-  { key: 'priceDesc', label: '높은 가격순' },             // price DESC
+  { key: 'recommend', label: '추천순' },
+  { key: 'popular', label: '인기순' },     // reviews DESC
+  { key: 'new', label: '최신순' },         // createdAt DESC
+  { key: 'reviews', label: '후기순' },     // reviews DESC
+  { key: 'ratingDesc', label: '별점높은순' },
+  { key: 'ratingAsc', label: '별점낮은순' },
+  { key: 'priceAsc', label: '낮은 가격순' },
+  { key: 'priceDesc', label: '높은 가격순' },
 ];
 
-/* -------------------- Filtering helpers -------------------- */
+/* -------------------- helpers -------------------- */
 function applyFilter(data, { min, max, locations }) {
   return data.filter((d) => {
     const priceOk = d.price >= min && d.price <= max;
@@ -95,7 +97,6 @@ function applyFilter(data, { min, max, locations }) {
     return priceOk && locOk;
   });
 }
-
 function applySort(data, sortKey) {
   const arr = [...data];
   switch (sortKey) {
@@ -123,22 +124,25 @@ function applySort(data, sortKey) {
 
 /* ======================= MarketHome ======================= */
 function MarketHome({ navigation }) {
-  // ----- favorites redraw -----
+  // 찜 상태 변경에 따른 재그리기
   const [, forceUpdate] = React.useReducer((x) => x + 1, 0);
   React.useEffect(() => subscribe(() => forceUpdate()), []);
 
-  // ----- filter state (committed) -----
+  // 필터 상태(적용된 값)
   const [sortKey, setSortKey] = React.useState('recommend');
   const [minPrice, setMinPrice] = React.useState(priceMinAll);
   const [maxPrice, setMaxPrice] = React.useState(priceMaxAll);
-  const [selLocations, setSelLocations] = React.useState([]); // [] = 전체
+  const [selLocations, setSelLocations] = React.useState([]);
 
-  // ----- modal (draft) -----
+  // 모달 & 드래프트 값
   const [open, setOpen] = React.useState(false);
   const [draftSort, setDraftSort] = React.useState(sortKey);
   const [draftMin, setDraftMin] = React.useState(minPrice.toString());
   const [draftMax, setDraftMax] = React.useState(maxPrice.toString());
   const [draftLocs, setDraftLocs] = React.useState(selLocations);
+
+  // ✅ 안전영역 패딩용
+  const insets = useSafeAreaInsets();
 
   const resetDraftFromState = () => {
     setDraftSort(sortKey);
@@ -146,12 +150,10 @@ function MarketHome({ navigation }) {
     setDraftMax(String(maxPrice));
     setDraftLocs(selLocations);
   };
-
   const openModal = () => {
     resetDraftFromState();
     setOpen(true);
   };
-
   const applyDraft = () => {
     const min = Math.max(priceMinAll, parseInt(draftMin || `${priceMinAll}`, 10));
     const max = Math.min(priceMaxAll, parseInt(draftMax || `${priceMaxAll}`, 10));
@@ -161,7 +163,6 @@ function MarketHome({ navigation }) {
     setSelLocations(draftLocs);
     setOpen(false);
   };
-
   const clearAll = () => {
     setSortKey('recommend');
     setMinPrice(priceMinAll);
@@ -170,7 +171,6 @@ function MarketHome({ navigation }) {
     resetDraftFromState();
   };
 
-  // ----- derived list -----
   const filtered = React.useMemo(() => {
     const f = applyFilter(PRODUCTS, { min: minPrice, max: maxPrice, locations: selLocations });
     return applySort(f, sortKey);
@@ -182,7 +182,6 @@ function MarketHome({ navigation }) {
     return applyFilter(PRODUCTS, { min: Math.min(min, max), max: Math.max(min, max), locations: draftLocs }).length;
   };
 
-  // ----- item render -----
   const onToggleLike = (item) => toggleFavorite(CATEGORY, item.id, item);
 
   const renderItem = ({ item }) => {
@@ -214,7 +213,6 @@ function MarketHome({ navigation }) {
     );
   };
 
-  // ----- header -----
   const sortLabel = SORTS.find((s) => s.key === sortKey)?.label ?? '정렬';
 
   return (
@@ -262,11 +260,11 @@ function MarketHome({ navigation }) {
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 16 }}
       />
 
-      {/* 필터 모달 */}
+      {/* ✅ 안전영역 반영한 필터 모달 */}
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.modalPage}>
           {/* 헤더 */}
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + 8 }]}>
             <TouchableOpacity onPress={() => setOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="close" size={24} color="#111" />
             </TouchableOpacity>
@@ -274,7 +272,8 @@ function MarketHome({ navigation }) {
             <View style={{ width: 24 }} />
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
+          {/* 콘텐츠 */}
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 180 + insets.bottom }}>
             {/* 정렬 */}
             <Text style={styles.sectionLabel}>정렬</Text>
             <View style={styles.grid2}>
@@ -338,7 +337,6 @@ function MarketHome({ navigation }) {
                   </TouchableOpacity>
                 );
               })}
-              {/* 전체 선택 토글 */}
               <TouchableOpacity
                 style={[styles.locBtn, !draftLocs.length && styles.locBtnActive]}
                 onPress={() => setDraftLocs([])}
@@ -350,7 +348,7 @@ function MarketHome({ navigation }) {
           </ScrollView>
 
           {/* 하단 고정 버튼 */}
-          <View style={styles.bottomBar}>
+          <View style={[styles.bottomBar, { paddingBottom: 12 + insets.bottom }]}>
             <TouchableOpacity style={styles.resetBtn} onPress={clearAll}>
               <Text style={styles.resetText}>초기화</Text>
             </TouchableOpacity>
@@ -507,10 +505,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 8,
+    paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#111' },
 
@@ -569,10 +567,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 10,
     backgroundColor: '#fff',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#eee',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: -2 },
+    elevation: 6,
   },
   resetBtn: {
     flex: 1,
