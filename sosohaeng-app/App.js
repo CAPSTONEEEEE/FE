@@ -1,5 +1,6 @@
 // App.js
 import React from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, TouchableOpacity, StyleSheet, Image, Text } from 'react-native';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -15,6 +16,7 @@ import ChatbotRecommend from './screens/RecommendScreen/ChatbotRecommend';
 import RandomResultScreen from './screens/RecommendScreen/RandomResult';
 import MarketScreen from './screens/MarketScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import FavoritesScreen from './screens/FavoritesScreen';
 //축제 스크린
 import FestivalsScreen from './screens/FestivalScreen/FestivalsScreen';
 import FestivalDetailScreen from './screens/FestivalScreen/FestivalDetailScreen';
@@ -174,6 +176,7 @@ export default function App() {
   return (
     // ✅ SafeAreaProvider로 감싸서 각 화면에서 useSafeAreaInsets() 정상 동작
     <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer theme={theme}>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={MainTabsWithFab} />
@@ -182,6 +185,7 @@ export default function App() {
           <Stack.Screen name="FestivalDetailScreen" component={FestivalDetailScreen} /> 
         </Stack.Navigator>
       </NavigationContainer>
+      </GestureHandlerRootView>
     </SafeAreaProvider>
   );
 }
