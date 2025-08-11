@@ -16,7 +16,6 @@ import ChatbotRecommend from './screens/RecommendScreen/ChatbotRecommend';
 import RandomResultScreen from './screens/RecommendScreen/RandomResult';
 import MarketScreen from './screens/MarketScreen';
 import SettingsScreen from './screens/SettingsScreen';
-import FavoritesScreen from './screens/FavoritesScreen';
 //축제 스크린
 import FestivalsScreen from './screens/FestivalScreen/FestivalsScreen';
 import FestivalDetailScreen from './screens/FestivalScreen/FestivalDetailScreen';
