@@ -15,7 +15,7 @@ export default function SettingsScreen({ navigation }) {
             onPress={() => navigation.navigate('찜')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
+            <Ionicons name="heart" size={22} color="#ff4d6d" />
           </TouchableOpacity>
         }
       />
