@@ -17,6 +17,10 @@ import RandomResultScreen from './screens/RecommendScreen/RandomResult';
 import MarketScreen from './screens/MarketScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
+//축제 스크린
+import FestivalsScreen from './screens/FestivalScreen/FestivalsScreen';
+import FestivalDetailScreen from './screens/FestivalScreen/FestivalDetailScreen';
+
 
 // PNG 아이콘(없으면 폴백)
 // fab_home2.png를 사용하도록 경로를 수정합니다.
@@ -176,6 +180,8 @@ export default function App() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={MainTabsWithFab} />
           <Stack.Screen name="찜" component={FavoritesScreen} />
+          {/* 축제 detailScreen 추가 */}
+          <Stack.Screen name="FestivalDetailScreen" component={FestivalDetailScreen} /> 
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
