@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "sosohaeng-app",
+    "scheme": "sosohaeng",
     "slug": "sosohaeng-app",
     "version": "1.0.0",
     "orientation": "portrait",

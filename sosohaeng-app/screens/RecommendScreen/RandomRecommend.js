@@ -1,9 +1,16 @@
+// RandomRecommendScreen.js
+
+import { useRouter } from 'expo-router';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBackBar from '../../components/TopBackBar';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function RandomRecommendScreen({ navigation }) {
+export default function RandomRecommendScreen() {
+  //useRouter 훅을 사용
+  const router = useRouter();
+
   const categories = [
     { title: '자연 힐링', emoji: '🏕️' },
     { title: '액티비티', emoji: '🏄' },
@@ -12,25 +19,28 @@ export default function RandomRecommendScreen({ navigation }) {
   ];
 
   const handleCategoryPress = (category) => {
-    // 여기에 카테고리 선택 시 실행될 로직을 추가합니다.
-    navigation.navigate('RandomResult', { category });
+    // RandomResult 화면의 실제 경로에 맞게 pathname을 확인하세요.
+    router.push({
+      pathname: '/(recommend)/result',
+      params: { title: category.title } // 객체 전체 대신 필요한 데이터만 전달하는 것이 좋습니다.
+    });
   };
 
   return (
-    // ✅ TopBackBar와 나머지 콘텐츠를 하나의 View로 감싸서 오류를 해결합니다.
-    <View style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <TopBackBar
         title="어디로 떠나볼까?"
         right={
           <TouchableOpacity
-            onPress={() => navigation.navigate('찜')}
+            // '찜' 화면의 실제 경로가 '/favorites'라고 가정했습니다.
+            onPress={() => router.push('/favorites')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
           </TouchableOpacity>
         }
       />
-      
+
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.content}>
           {categories.map((category, index) => (
@@ -45,21 +55,16 @@ export default function RandomRecommendScreen({ navigation }) {
           ))}
         </View>
       </SafeAreaView>
-    </View>
+    </SafeAreaView>
   );
 }
 
+// 스타일 코드
 const styles = StyleSheet.create({
   content: {
-    flex: 1, // 남은 공간을 모두 차지
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // 버튼 간의 간격을 균등하게 배분
-    /*
-    justifyContent: 'space-evenly',
-    alignContent: 'space-evenly',
-    paddingHorizontal: 16,
-    paddingVertical: 16,*/
     justifyContent: 'space-between',
     alignContent: 'space-between',
     paddingHorizontal: 16,
@@ -67,10 +72,9 @@ const styles = StyleSheet.create({
     paddingBottom: 70,
   },
   button: {
-    width: '48%', 
+    width: '48%',
     height: '49%',
-    //aspectRatio: 1, 
-    backgroundColor:'#FFFBEC',
+    backgroundColor: '#FFFBEC',
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
