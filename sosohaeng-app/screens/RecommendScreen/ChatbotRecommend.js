@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Keyboard, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ChatbotRecommend({ navigation }) {
   const [messages, setMessages] = useState([
@@ -41,7 +42,7 @@ export default function ChatbotRecommend({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <TopBackBar
         title="나에게 딱! 맞는 여행"
         right={
@@ -93,7 +94,7 @@ export default function ChatbotRecommend({ navigation }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 

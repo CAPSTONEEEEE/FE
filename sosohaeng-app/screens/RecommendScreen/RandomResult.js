@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import TopBackBar from '../../components/TopBackBar';
-import { useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-export default function RandomResultScreen({ navigation }) {
-  const route = useRoute();
-  const { category } = route.params;
+export default function RandomResultScreen() {
+  const params = useLocalSearchParams();
+  const { title } = params;
+  const router = useRouter();
 
   const initialResults = [
     {
@@ -54,29 +56,24 @@ export default function RandomResultScreen({ navigation }) {
   const [results, setResults] = useState(initialResults);
 
   const handleItemPress = (item) => {
-    alert(`'${item.title}' 상세 페이지로 이동합니다.`);
+    router.push({ pathname: '/detail', params: { itemId: item.id } });
   };
   
   const handleLikePress = (itemToLike) => {
     setResults(prevResults => prevResults.map(item => {
       if (item.id === itemToLike.id) {
-        return {
-          ...item,
-          isLiked: !item.isLiked,
-          likes: item.isLiked ? item.likes - 1 : item.likes + 1,
-        };
+        return { ...item, isLiked: !item.isLiked, likes: item.isLiked ? item.likes - 1 : item.likes + 1 };
       }
       return item;
     }));
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <TopBackBar title="어디로 떠나볼까?" />
 
       <View style={styles.header}>
-        <Text style={styles.headerEmoji}>{category.emoji}</Text>
-        <Text style={styles.headerTitle}>{category.title} 여행지 추천결과</Text>
+        <Text style={styles.headerTitle}>{title} 여행지 추천결과</Text>
       </View>
 
       <ScrollView style={styles.list}>
@@ -92,8 +89,8 @@ export default function RandomResultScreen({ navigation }) {
             <View style={styles.itemTextContainer}>
               <Text style={styles.itemTitle}>{item.title}</Text>
               <Text style={styles.itemDescription}>{item.description}</Text>
-              <TouchableOpacity style={styles.likeButton} onPress={() => handleLikePress(item)}>
-                <Ionicons 
+              <TouchableOpacity style={styles.likeButton} onPress={(e) => { e.stopPropagation(); handleLikePress(item); }}>
+                <Ionicons
                   name={item.isLiked ? "heart" : "heart-outline"} 
                   size={16} 
                   color={item.isLiked ? "#ff4d6d" : "#666"} 

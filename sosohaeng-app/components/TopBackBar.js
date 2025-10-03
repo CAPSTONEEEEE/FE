@@ -1,21 +1,23 @@
 // components/TopBackBar.js
+
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
 export default function TopBackBar({ title = '', right = null }) {
-  const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const router = useRouter();
 
   const onBack = () => {
-    if (navigation.canGoBack()) navigation.goBack();
-    else navigation.navigate('Main', { screen: '홈' });
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.push('/(tabs)/home');
+    }
   };
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 6 }]}>
+    <View style={styles.wrap}>
       {/* Left: Back */}
       <View style={styles.side}>
         <TouchableOpacity style={styles.iconBtn} onPress={onBack} activeOpacity={0.7}>
@@ -23,18 +25,17 @@ export default function TopBackBar({ title = '', right = null }) {
         </TouchableOpacity>
       </View>
 
-      {/* Center: Title (진짜 중앙) */}
+      {/* Center: Title */}
       <View style={styles.center}>
         {!!title && (
-          <Text style={styles.title} numberOfLines={1}>
-            {title}
+          <Text style={styles.title} numberOfLines={1}>{title}
           </Text>
         )}
       </View>
 
-      {/* Right: Action (찜 등) */}
+      {/* Right: Action */}
       <View style={styles.side}>
-        {right ? right : <View style={{ width: 24, height: 24 }} />}
+        {right ? right : <View />}
       </View>
     </View>
   );
@@ -42,34 +43,29 @@ export default function TopBackBar({ title = '', right = null }) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    minHeight: 56, // 헤더 최소 높이
   },
   side: {
-    width: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconBtn: {
     width: 40,
-    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   center: {
     flex: 1,
-    alignItems: 'center',   // ← 중앙 정렬
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
+  },
+  iconBtn: {
+    padding: 8,
   },
 });

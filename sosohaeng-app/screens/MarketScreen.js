@@ -15,6 +15,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBackBar from '../components/TopBackBar';
 
 // ✅ 전역 찜 스토어 (경로 유지: screens/FavoritesStore.js)
@@ -216,7 +217,7 @@ function MarketHome({ navigation }) {
   const sortLabel = SORTS.find((s) => s.key === sortKey)?.label ?? '정렬';
 
   return (
-    <View style={styles.page}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <TopBackBar
         title="로컬 마켓"
         right={
@@ -358,7 +359,7 @@ function MarketHome({ navigation }) {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -371,7 +372,7 @@ function ProductDetail({ route, navigation }) {
   const liked = isFavorite(CATEGORY, product.id);
 
   return (
-    <View style={styles.page}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
       <TopBackBar
         title="상품 상세"
         right={
@@ -424,7 +425,7 @@ function ProductDetail({ route, navigation }) {
           <Text style={styles.p}>{product.seller}</Text>
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

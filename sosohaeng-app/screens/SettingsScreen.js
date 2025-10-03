@@ -1,12 +1,15 @@
 // screens/SettingsScreen.js
 import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import TopBackBar from '../components/TopBackBar';
 
-export default function SettingsScreen({ navigation }) {
+export default function SettingsScreen() {
+  const router = useRouter();
   return (
-    <View style={styles.page}>
+    <SafeAreaView style={styles.page}>
       {/* ✅ 상단바: 타이틀 중앙, 오른쪽에 찜 버튼 고정 */}
       <TopBackBar
         title="설정"
@@ -25,7 +28,7 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.h1}>설정 (목업)</Text>
         <Text style={styles.p}>알림, 지역, 테마 등의 사용자 설정을 구성할 수 있어요.</Text>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
