@@ -49,8 +49,8 @@ export default function CustomTabBar({ state, navigation }) {
       <View
         style={[
           {
-            height: TAB_HEIGHT,
-            width: "92%",
+            height: TAB_HEIGHT+30,
+            width: "100%",
             backgroundColor: "#fff",
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
@@ -122,7 +122,7 @@ export default function CustomTabBar({ state, navigation }) {
           }}
         >
           {/* 로고 이미지는 프로젝트 경로에 맞춰 필요시 교체 */}
-          <Image source={require("../assets/icon.png")} style={{ width: 44, height: 44, resizeMode: "contain" }} />
+          <Image source={require("../assets/icon2.png")} style={{ width: 55, height: 55, resizeMode: "contain" }} />
         </View>
       </TouchableOpacity>
     </View>
