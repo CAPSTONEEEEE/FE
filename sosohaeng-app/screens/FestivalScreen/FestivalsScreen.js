@@ -2,8 +2,7 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image} from 'react-native';
 import Header from '../../components/Header';
-import Footer from '../../components/Footer';
-import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+//import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -99,10 +98,8 @@ export default function FestivalsScreen() {
         )}
       </View>
 
-      {/* 하단바 */}
-      <Footer />
-
-      {/* 슬라이드 바 */}
+      {/* 슬라이드 바 (Expo Go 실행 시 비활성화) */}
+      {/*
       <BottomSheet
         ref={bottomSheetRef}
         index={0}
@@ -119,6 +116,7 @@ export default function FestivalsScreen() {
           />
         </BottomSheetView>
       </BottomSheet>
+      */}
     </View>
   );
 }

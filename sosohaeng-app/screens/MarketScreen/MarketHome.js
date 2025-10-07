@@ -1,52 +1,67 @@
-//screens/MarketScreen/MarketHome.js
-import { View, Text, Button, FlatList, TouchableOpacity } from "react-native";
-import { Link, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import api from "../../utils/apiClient"; // 경로 확인
+// screens/MarketScreen/MarketHome.js
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Header from "../../components/Header";
+import { useRouter } from "expo-router";
 
 export default function MarketHome() {
   const router = useRouter();
-  const [items, setItems] = useState([]);
-
-  useEffect(() => {
-    // 예시: 상품 목록 조회
-    (async () => {
-      try {
-        const res = await api.get("/markets/items", { params: { page: 1, size: 20 } });
-        setItems(res.data?.items ?? []);
-      } catch (e) {
-        console.warn(e);
-      }
-    })();
-  }, []);
-
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={{ padding: 12, borderBottomWidth: 1, borderColor: "#eee" }}
-      onPress={() => router.push(`/market/product/${item.id}`)}
-    >
-      <Text style={{ fontSize: 16, fontWeight: "600" }}>{item.name}</Text>
-      <Text>{item.price?.toLocaleString()}원</Text>
-    </TouchableOpacity>
-  );
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ padding: 16, gap: 8 }}>
-        <Text style={{ fontSize: 20, fontWeight: "700" }}>마켓</Text>
-        {/* Link 예시 */}
-        <Link href="/market/cart">장바구니로 가기</Link>
-        <Link href="/market/wishlist">위시리스트로 가기</Link>
-        <Link href="/market/seller">판매자 메뉴</Link>
-        {/* 버튼으로 push 예시 */}
-        <Button title="장바구니 push" onPress={() => router.push("/market/cart")} />
-      </View>
+    // SafeAreaView로 상단 노치 영역만큼 확보
+    <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+      {/* 상단바(뒤로가기/타이틀)는 공용 Header로 통일 */}
+      <Header title="마켓" />
 
-      <FlatList
-        data={items}
-        keyExtractor={(it) => String(it.id)}
-        renderItem={renderItem}
-      />
-    </View>
+      <View style={styles.container}>
+        <Text style={styles.link} onPress={() => router.push("/(tabs)/market/cart")}>
+          장바구니로 가기
+        </Text>
+        <Text style={styles.link} onPress={() => router.push("/(tabs)/market/wishlist")}>
+          위시리스트로 가기
+        </Text>
+        <Text style={styles.link} onPress={() => router.push("/(tabs)/market/seller")}>
+          판매자 메뉴
+        </Text>
+
+        <TouchableOpacity
+          onPress={() => router.push("/(tabs)/market/cart")}
+          style={styles.button}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.buttonText}>장바구니 push</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  link: {
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  button: {
+    marginTop: 14,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#e6f4f7",
+  },
+  buttonText: {
+    fontSize: 18,
+    color: "#2c6e7f",
+  },
+});

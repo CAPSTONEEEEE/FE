@@ -1,11 +1,12 @@
+// app/market/_layout.jsx
 import { Stack } from "expo-router";
 
 export default function MarketLayout() {
   return (
     <Stack
       screenOptions={{
-        headerTitleAlign: "center",
-        // gestureEnabled: true, // 필요시
+        headerShown: true,            // 헤더 표시 (뒤로가기 버튼 활성화)
+        headerTitleAlign: "center",   // 제목 가운데 정렬 유지
       }}
     >
       <Stack.Screen name="index" options={{ title: "마켓" }} />

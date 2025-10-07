@@ -22,7 +22,7 @@
     "react-native": "0.81.4",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-maps": "1.20.1",
-    "react-native-reanimated": "~4.1.1",
+    "react-native-reanimated": "~3.10.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0"
   },
@@ -30,6 +30,9 @@
     "@babel/core": "^7.20.0",
     "@types/react": "~19.1.10",
     "typescript": "^5.2.2"
+  },
+  "overrides": {
+    "react-native-worklets-core": "0.5.0"
   },
   "private": true
 }

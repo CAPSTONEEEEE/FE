@@ -1,4 +1,5 @@
 // components/Footer.js
+/*
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ export default function Footer() {
   );
 }
 
+
 const styles = StyleSheet.create({
   wrapper: {
     backgroundColor: '#fff',
@@ -28,3 +30,4 @@ const styles = StyleSheet.create({
   },
   text: { color: '#888', fontSize: 12 },
 });
+*/
