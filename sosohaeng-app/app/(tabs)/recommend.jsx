@@ -11,8 +11,8 @@ export default function RecommendScreen() {
   const router = useRouter(); 
 
   const goToFavorites = () => router.push('/favorites');
-  const goToRandom = () => router.push('/(recommend)/random'); 
-  const goToChatbot = () => router.push('/(recommend)/chatbot');
+  const goToRandom = () => router.push('/recommend_/random'); 
+  const goToChatbot = () => router.push('/recommend_/chatbot');
 
   return (
     // ✅ 최상위 View를 SafeAreaView로 변경합니다.
