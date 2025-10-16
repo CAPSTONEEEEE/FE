@@ -1,66 +1,100 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '../../utils/apiClient'; // apiClient 경로는 실제 프로젝트에 맞게 확인해주세요.
 
-export default function FestivalDetailScreen({ route }) {
-  const { festival } = route.params ?? {};
-  if (!festival) {
+/**
+ * 특정 ID의 축제 상세 정보를 백엔드로부터 가져오는 비동기 함수입니다.
+ */
+const fetchFestivalById = async (id) => {
+  if (!id) return null;
+  const { data } = await apiClient.get(`/festivals/${id}`);
+  return data;
+};
+
+// Expo Router 파일로부터 'id'를 prop으로 전달받습니다.
+export default function FestivalDetailScreen({ id }) {
+  const { data: festival, isLoading, isError, error } = useQuery({
+    queryKey: ['festival', id],
+    queryFn: () => fetchFestivalById(id),
+    enabled: !!id,
+  });
+
+  if (isLoading) {
     return (
       <View style={styles.center}>
-        <Text>축제 정보가 없습니다.</Text>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (isError || !festival) {
+    console.error("API Error:", error);
+    return (
+      <View style={styles.center}>
+        <Text>축제 정보를 불러오는 데 실패했습니다.</Text>
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* 포스터 */}
-      {festival.image ? (
-        <Image source={{ uri: festival.image }} style={styles.poster} />
-      ) : (
-        <View style={[styles.poster, styles.posterPlaceholder]}>
-          <Text style={styles.placeholderText}>No image</Text>
-        </View>
-      )}
-
-      {/* 내용 */}
+      <Image source={{ uri: festival.image_url }} style={styles.poster} />
       <View style={styles.content}>
-        <Text style={styles.name}>{festival.name}</Text>
-        <Text style={styles.meta}>📍 {festival.address}</Text>
-        <Text style={styles.meta}>🗓 {festival.date}</Text>
-
+        <Text style={styles.name}>{festival.title}</Text>
+        <Text style={styles.meta}>📍 {festival.location}</Text>
+        <Text style={styles.meta}>🗓 {`${festival.event_start_date} ~ ${festival.event_end_date}`}</Text>
         <Text style={styles.sectionTitle}>소개</Text>
-        <Text style={styles.description}>{festival.info ?? festival.description ?? '상세 정보가 없습니다.'}</Text>
-
-        <Text style={styles.sectionTitle}>태그</Text>
-        <View style={styles.tagsRow}>
-          {(festival.tags || []).map((t, i) => (
-            <Text key={i} style={styles.tag}>#{t}</Text>
-          ))}
-        </View>
-
-        <View style={styles.extraRow}>
-          <Text style={styles.likes}>♡ {festival.likes ?? 0}</Text>
-        </View>
+        <Text style={styles.description}>{festival.description || '상세 정보가 없습니다.'}</Text>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  contentContainer: { paddingBottom: 32 },
-  poster: { width: '100%', height: 240, backgroundColor: '#eee' },
-  posterPlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  placeholderText: { color: '#999' },
-  content: { padding: 16 },
-  name: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
-  meta: { fontSize: 14, color: '#555', marginBottom: 4 },
-  sectionTitle: { marginTop: 12, fontSize: 16, fontWeight: '700' },
-  description: { marginTop: 6, fontSize: 15, lineHeight: 22, color: '#333' },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 8 },
-  tag: { marginRight: 8, color: '#007aff', fontSize: 13 },
-  extraRow: { marginTop: 12, flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' },
-  likes: { fontSize: 14, color: '#ff4d6d' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#fff' 
+  },
+  contentContainer: { 
+    paddingBottom: 32 
+  },
+  poster: { 
+    width: '100%', 
+    height: 240, 
+    backgroundColor: '#eee' 
+  },
+  content: { 
+    padding: 16 
+  },
+  name: { 
+    fontSize: 24, 
+    fontWeight: '700', 
+    marginBottom: 8 
+  },
+  meta: { 
+    fontSize: 15, 
+    color: '#555', 
+    marginBottom: 6,
+    lineHeight: 22,
+  },
+  sectionTitle: { 
+    marginTop: 20, 
+    fontSize: 18, 
+    fontWeight: '700',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 20,
+  },
+  description: { 
+    marginTop: 8, 
+    fontSize: 16, 
+    lineHeight: 24, 
+    color: '#333' 
+  },
+  center: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
 });
-
