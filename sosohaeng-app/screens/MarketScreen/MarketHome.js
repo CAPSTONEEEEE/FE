@@ -1,12 +1,13 @@
 // screens/MarketScreen/MarketHome.js
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   FlatList,
+  TouchableOpacity,
   Image,
+  ActivityIndicator,
   TextInput,
   Modal,
   ScrollView,
@@ -76,19 +77,18 @@ export default function MarketHome() {
     setRefreshing(false);
   }, [load]);
 
-  // ✅ 검색 / 필터 / 정렬
-  const filtered = useMemo(() => {
-    let arr = [...markets];
-
-    if (region !== "전체") arr = arr.filter((p) => p.region === region);
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase();
-      arr = arr.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.desc.toLowerCase().includes(q)
-      );
-    }
+  // 검색 + 지역 필터
+  const filteredItems = useMemo(() => {
+    const base = Array.isArray(items) ? items : [];
+    const byRegion = region === '전체' ? base : base.filter(it => String(it.region) === String(region));
+    const keyword = q.trim().toLowerCase();
+    if (!keyword) return byRegion;
+    return byRegion.filter(it =>
+      [it.title, it.desc, it.location, it.seller]
+        .filter(Boolean)
+        .some(v => String(v).toLowerCase().includes(keyword))
+    );
+  }, [items, region, q]);
 
   // 정렬
   const sortedItems = useMemo(() => {
@@ -100,9 +100,8 @@ export default function MarketHome() {
     } else {
       arr.sort((a, b) => (b._createdAt - a._createdAt) || (b._idx - a._idx));
     }
-
     return arr;
-  }, [markets, region, sort, searchQuery]);
+  }, [filteredItems, sortKey]);
 
   const renderItem = ({ item }) => {
     const fav = isFavorite(String(item.id));
@@ -220,48 +219,60 @@ export default function MarketHome() {
                         {label}
                       </Text>
                     </TouchableOpacity>
-                  )}
-                </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        </View>
 
-                {/* 정렬칩 */}
-                <View style={styles.rowWrap}>
-                  {SORTS.map((s) => {
-                    const active = s.key === sort;
-                    return (
-                      <TouchableOpacity
-                        key={s.key}
-                        onPress={() => setSort(s.key)}
-                        style={[styles.sortChip, active && styles.sortChipActive]}
-                      >
-                        <Text
-                          style={[styles.sortText, active && styles.sortTextActive]}
-                        >
-                          {s.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+        {/* 지역 선택 */}
+        <View style={styles.dropdownCol}>
+          <TouchableOpacity
+            onPress={() => setOpenRegionModal(true)}
+            activeOpacity={0.9}
+            style={styles.dropdownButton}
+          >
+            <Text style={styles.dropdownText}>
+              {region === '전체' ? '지역: 전체' : `지역: ${region}`}
+            </Text>
+            <Ionicons name="chevron-down" size={18} color="#6b7a86" />
+          </TouchableOpacity>
 
-                {/* 지역칩 */}
-                <View style={[styles.rowWrap, { marginTop: 6 }]}>
-                  {REGIONS.map((r) => {
-                    const active = r === region;
-                    return (
-                      <TouchableOpacity
-                        key={r}
-                        onPress={() => setRegion(r)}
-                        style={[styles.regionChip, active && styles.regionChipActive]}
-                      >
-                        <Text
-                          style={[styles.regionText, active && styles.regionTextActive]}
-                        >
-                          {r}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+          <Modal
+            visible={openRegionModal}
+            animationType="fade"
+            transparent
+            onRequestClose={() => setOpenRegionModal(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPressOut={() => setOpenRegionModal(false)}
+            >
+              <View style={styles.modalSheet}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>지역 선택</Text>
                 </View>
+                <ScrollView>
+                  {REGIONS.map(r => (
+                    <TouchableOpacity
+                      key={r}
+                      onPress={() => { setRegion(r); setOpenRegionModal(false); }}
+                      style={[
+                        styles.modalItem,
+                        r === region && { backgroundColor: '#f0fbfe' }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.modalItemText,
+                        r === region && { fontWeight: '800' }
+                      ]}>
+                        {r}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
             </TouchableOpacity>
           </Modal>
@@ -331,55 +342,64 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 44,
     paddingHorizontal: 12,
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#333" },
-  rowWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  searchInput: { marginLeft: 8, flex: 1, color: '#0f3c45' },
+
+  // 드롭다운 두 개 한 줄
+  dropdownRow: {
+    marginTop: 10,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     gap: 10,
-    marginBottom: 8,
   },
-  sortChip: {
-    paddingHorizontal: 14,
-    height: 36,
-    backgroundColor: "#f0f4f6",
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sortChipActive: { backgroundColor: "#e6f3f6", borderWidth: 1, borderColor: "#c5e6ee" },
-  sortText: { color: "#6b7b86", fontWeight: "600" },
-  sortTextActive: { color: "#1f7a8c" },
-  regionChip: {
+  dropdownCol: { flex: 1 },
+  dropdownButton: {
+    height: 40,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    height: 34,
-    backgroundColor: "#f7fafb",
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#e5eef2",
+    backgroundColor: '#eff4f7',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
   },
-  regionChipActive: { backgroundColor: "#dff3f7", borderColor: "#bfe7ef" },
-  regionText: { color: "#7a8c97" },
-  regionTextActive: { color: "#1f7a8c", fontWeight: "700" },
+  dropdownText: { fontWeight: '700', color: '#0f3c45' },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', padding: 20 },
+  modalSheet: { backgroundColor: '#fff', borderRadius: 14, maxHeight: '70%', overflow: 'hidden' },
+  modalHeader: { padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e5e7eb' },
+  modalTitle: { fontSize: 16, fontWeight: '800', color: '#0f3c45' },
+  modalItem: { paddingHorizontal: 16, paddingVertical: 14 },
+  modalItemText: { color: '#0f3c45', fontWeight: '600' },
+
   card: {
-    flexDirection: "row",
-    padding: 12,
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
     borderRadius: 16,
-    backgroundColor: "#f9fcfd",
-    marginHorizontal: 12,
-    marginVertical: 8,
-    gap: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  cardImage: { width: 110, height: 110, borderRadius: 12, backgroundColor: "#d3eaf2" },
-  cardTitle: { fontSize: 20, fontWeight: "800", color: "#0f3c45" },
-  cardLoc: { marginTop: 2, color: "#46616b" },
-  cardDesc: { marginTop: 4, color: "#5c717b" },
-  cardMeta: { flexDirection: "row", alignItems: "center", marginTop: 6 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  metaText: { color: "#0f3c45", fontWeight: "700" },
+  thumbWrap: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', marginRight: 12, backgroundColor: '#dfe9ef' },
+  thumb: { width: '100%', height: '100%' },
+
+  title: { fontSize: 20, fontWeight: '900', color: '#0f3c45' },
+  location: { marginTop: 4, color: '#5b7280' },
+  desc: { marginTop: 6, color: '#4b5d67' },
+
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e6f6f9',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    height: 24,
+  },
+  metaText: { marginLeft: 4, color: '#0f93a6', fontWeight: '800' },
+  price: { fontSize: 16, fontWeight: '900', color: '#0f3c45' },
 });
