@@ -18,11 +18,13 @@ export default function ProductDetailScreen(props) {
   const params = useLocalSearchParams();
   const id = useMemo(
     () => String(params?.id ?? props?.productId ?? props?.route?.params?.id ?? ""),
+
     [params?.id, props?.productId, props?.route?.params?.id]
   );
 
   const [item, setItem] = useState(null);
   const [fetching, setFetching] = useState(true);
+
 
   const { isFavorite, toggleFavorite, likeDelta, upsertItem } = useFavoritesStore();
   const liked = isFavorite(id);
@@ -68,6 +70,7 @@ export default function ProductDetailScreen(props) {
               sellerNote: found.sellerNote ?? found.description ?? "",
               images: Array.isArray(found.images) ? found.images : [found.image].filter(Boolean),
               summary: found.summary ?? found.desc ?? "",
+
               specs: Array.isArray(found.specs) ? found.specs : [],
               delivery: Array.isArray(found.delivery) ? found.delivery : ["전국 택배 배송"],
             };
@@ -101,7 +104,11 @@ export default function ProductDetailScreen(props) {
 
   const router = useRouter();
   const navigation = useNavigation();
-  useEffect(() => { navigation.setOptions({ headerShown: false }); }, [navigation]);
+
+  // ✅ 기본 Stack 헤더 숨김(중복 방지)
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   if (!id || (!item && !fetching)) {
     return (
@@ -110,22 +117,17 @@ export default function ProductDetailScreen(props) {
       </SafeAreaView>
     );
   }
-  if (fetching && !item) {
-    return (
-      <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>불러오는 중…</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const likesShown = Number(item.likes ?? 0) + delta;
 
   return (
     <View style={styles.root}>
       <SafeAreaView style={styles.safe} edges={["left", "right", "top", "bottom"]}>
-        {/* 헤더 */}
+        {/* 커스텀 헤더 */}
         <View style={styles.customHeader}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            activeOpacity={0.7}
+          >
             <Ionicons name="chevron-back" size={26} color="#0f3c45" />
           </TouchableOpacity>
 
@@ -140,7 +142,7 @@ export default function ProductDetailScreen(props) {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
-          {/* 이미지 */}
+          {/* 이미지 가로 스크롤 */}
           <ScrollView
             horizontal
             pagingEnabled
@@ -159,6 +161,7 @@ export default function ProductDetailScreen(props) {
           {/* ✅ 상품명 + 별/하트(빨간 영역으로 이동) */}
           <View style={[styles.card, { marginTop: 10 }]}>
             <Text style={styles.productName}>{item.productName}</Text>
+
             <View style={{ flexDirection: "row", marginTop: 8 }}>
               <View style={styles.metaRow}>
                 <Ionicons name="star" size={16} color="#1f7a8c" />
@@ -254,38 +257,27 @@ const styles = StyleSheet.create({
 
   heroImage: { width: 360, height: 230, resizeMode: "cover" },
 
-  // 매장 블록 (파란 영역)
-  shopBlock: {
+  block: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 14,
+    paddingBottom: 8,
     backgroundColor: "#fff",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e6eef2",
   },
-  shopTitle: { fontSize: 24, fontWeight: "900", color: "#0f3c45" },
-  location: { marginTop: 4, color: "#3f5c66" },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 10,
-  },
+  shopTitle: { fontSize: 28, fontWeight: "900", color: "#0f3c45" },
+  location: { marginTop: 6, color: "#3f5c66" },
+
   chatBtn: {
-    alignSelf: "flex-start",
+    alignSelf: "flex-end",
+    marginTop: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 12,
     backgroundColor: "#e8f5f8",
   },
   chatText: { color: "#0f6b7a", fontWeight: "800" },
-  favToggleBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#f2f6f8",
-  },
 
-  // 상품 정보 블록 (빨간 영역)
   card: {
     marginHorizontal: 14,
     backgroundColor: "#e9f9ff",
@@ -293,10 +285,11 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   productName: { fontSize: 20, fontWeight: "900", color: "#0f3c45" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { color: "#0f3c45", fontWeight: "800" },
 
   sectionTitle: { fontSize: 16, fontWeight: "900", color: "#0f3c45" },
   paragraph: { marginTop: 6, lineHeight: 21, color: "#455e68" },
-}
-);
+  bullet: { color: "#455e68" },
+
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  metaText: { color: "#0f3c45", fontWeight: "800" },
+});
