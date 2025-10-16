@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
+import useFavoritesStore from '../stores/favoritesStore'; // ✅ 즐겨찾기 스토어
 
 const REGIONS = ['전체','서울','경기','강원','부산','대구','인천','광주','대전','울산','세종','충북','충남','전북','전남','경북','경남','제주'];
 const SORT_LABELS = ['인기순','후기순','최신순'];
@@ -29,12 +30,15 @@ export default function MarketHome() {
   const [sortKey, setSortKey] = useState('인기순');
 
   const [openRegionModal, setOpenRegionModal] = useState(false);
-  const [openSortModal, setOpenSortModal] = useState(false);
+  const [openSortModal,   setOpenSortModal]   = useState(false);
 
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError]     = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ✅ 스토어
+  const { isFavorite, likeDelta, syncFromList } = useFavoritesStore();
 
   const load = useCallback(async () => {
     try {
@@ -45,27 +49,27 @@ export default function MarketHome() {
       const json = await res.json();
       const list = Array.isArray(json) ? json : (json.items ?? []);
 
-      // createdAt이 없을 수 있어 최신순 정렬용으로 보강
+      // 최신순 정렬용 보강
       const now = Date.now();
       const enriched = list.map((it, idx) => ({
         ...it,
         _idx: idx,
         _createdAt: Number(it?.createdAt ?? it?.updatedAt ?? (now - idx * 1000)),
         rating: Number(it?.rating ?? 0),
-        likes: Number(it?.likes ?? 0),
-        price: Number(it?.price ?? 0),
+        likes:  Number(it?.likes  ?? 0),
+        price:  Number(it?.price  ?? 0),
       }));
+
       setItems(enriched);
+      syncFromList(enriched); // ✅ 상세에서 필요할 수 있는 기본 정보 동기화
     } catch (e) {
       setError(e.message || '네트워크 오류');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [syncFromList]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -94,56 +98,57 @@ export default function MarketHome() {
     } else if (sortKey === '후기순') {
       arr.sort((a, b) => (b.rating - a.rating) || (b.likes - a.likes));
     } else {
-      // 최신순: createdAt 내림차순 (없으면 _idx로 대체)
       arr.sort((a, b) => (b._createdAt - a._createdAt) || (b._idx - a._idx));
     }
     return arr;
   }, [filteredItems, sortKey]);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.9}
-      onPress={() =>
-        router.push({
-          pathname: '/market/product/[id]',
-          params: { id: String(item.id), title: item.title },
-        })
-      }
-    >
-      <View style={styles.thumbWrap}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.thumb} />
-        ) : (
-          <View style={[styles.thumb, { backgroundColor: '#dfe9ef' }]} />
-        )}
-      </View>
-      <View style={{ flex: 1, paddingRight: 6 }}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.location} numberOfLines={1}>📍 {item.location}</Text>
-        {!!item.desc && (
-          <Text style={styles.desc} numberOfLines={2}>{item.desc}</Text>
-        )}
-        <View style={styles.metaRow}>
-          <View style={styles.metaChip}>
-            <Ionicons name="star" size={14} color="#0f93a6" />
-            <Text style={styles.metaText}>{Number(item.rating ?? 0).toFixed(1)}</Text>
-          </View>
-          <View style={[styles.metaChip, { marginLeft: 10 }]}>
-            <Ionicons name="heart" size={14} color="#0f93a6" />
-            <Text style={styles.metaText}>{item.likes ?? 0}</Text>
-          </View>
-          <View style={{ flex: 1 }} />
-          <Text style={styles.price}>₩{Number(item.price ?? 0).toLocaleString()}</Text>
+  const renderItem = ({ item }) => {
+    const fav = isFavorite(String(item.id));
+    const likesShown = Number(item.likes) + (likeDelta[String(item.id)] ?? 0); // ✅ 상세에서 +1 반영
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: '/market/product/[id]',
+            params: { id: String(item.id), title: item.title },
+          })
+        }
+      >
+        <View style={styles.thumbWrap}>
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.thumb} />
+          ) : (
+            <View style={[styles.thumb, { backgroundColor: '#dfe9ef' }]} />
+          )}
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+        <View style={{ flex: 1, paddingRight: 6 }}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.location} numberOfLines={1}>📍 {item.location}</Text>
+          {!!item.desc && (<Text style={styles.desc} numberOfLines={2}>{item.desc}</Text>)}
+          <View style={styles.metaRow}>
+            <View style={styles.metaChip}>
+              <Ionicons name="star" size={14} color="#0f93a6" />
+              <Text style={styles.metaText}>{Number(item.rating ?? 0).toFixed(1)}</Text>
+            </View>
+            <View style={[styles.metaChip, { marginLeft: 10 }]}>
+              <Ionicons name={fav ? "heart" : "heart-outline"} size={14} color="#0f93a6" />
+              <Text style={styles.metaText}>{likesShown}</Text>
+            </View>
+            <View style={{ flex: 1 }} />
+            <Text style={styles.price}>₩{Number(item.price ?? 0).toLocaleString()}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading && !items.length) {
     return (
       <SafeAreaView style={styles.root}>
-        <Header onBack={() => router.back()} />
+        <Header onBack={() => router.back()} onWishlist={() => router.push('/market/wishlist')} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator />
         </View>
@@ -152,9 +157,9 @@ export default function MarketHome() {
   }
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
       {/* 상단바 */}
-      <Header onBack={() => router.back()} />
+      <Header onBack={() => router.back()} onWishlist={() => router.push('/market/wishlist')} />
 
       {/* 검색창 */}
       <View style={styles.searchRow}>
@@ -297,24 +302,28 @@ export default function MarketHome() {
           )
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
-function Header({ onBack }) {
+function Header({ onBack, onWishlist }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onBack} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
         <Ionicons name="chevron-back" size={22} color="#0f3c45" />
       </TouchableOpacity>
+
       <Text style={styles.headerTitle}>로컬 특산물 구경하기</Text>
-      <View style={{ width: 22 }} />
+
+      <TouchableOpacity onPress={onWishlist} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="heart" size={22} color="#ff4d6d" />
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f1f7fa' },
+  root: { flex: 1, backgroundColor: '#f1f7fa', paddingTop: 0},
 
   header: {
     height: 52,
@@ -322,8 +331,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     backgroundColor: '#f1f7fa',
+    justifyContent: 'space-between',
   },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#0f3c45' },
+  headerTitle: { textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#0f3c45' },
 
   searchRow: {
     marginTop: 8,
