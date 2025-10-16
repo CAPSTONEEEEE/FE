@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { API_BASE_URL } from "../../src/config/api";
 
 const REGIONS = ["전체", "서울", "경기", "강원", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
 const SORTS = [
@@ -34,8 +35,14 @@ export default function MarketHome() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const res = await fetch("http://192.168.0.67:8000/mock_data/mock_markets.json");
+        //const res = await fetch("http://192.168.0.67:8000/mock_data/mock_markets.json");
+        //const data = await res.json();
+
+        const res = await fetch(`${API_BASE_URL}/mock_data/mock_markets.json`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        setMarkets(data);
+
         setMarkets(data);
       } catch (err) {
         console.error("❌ mock_markets.json 로드 실패:", err);
