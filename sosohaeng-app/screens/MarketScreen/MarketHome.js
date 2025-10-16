@@ -8,43 +8,73 @@ import {
   FlatList,
   Image,
   TextInput,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../../components/Header";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+  Modal,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { API_BASE_URL } from '../../src/config/api';
+import useFavoritesStore from '../stores/favoritesStore'; // ✅ 즐겨찾기 스토어
 
-const REGIONS = ["전체", "서울", "경기", "강원", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
-const SORTS = [
-  { key: "popular", label: "인기순" },
-  { key: "review", label: "후기순" },
-  { key: "new", label: "최신순" },
-];
+const REGIONS = ['전체','서울','경기','강원','부산','대구','인천','광주','대전','울산','세종','충북','충남','전북','전남','경북','경남','제주'];
+const SORT_LABELS = ['인기순','후기순','최신순'];
 
 export default function MarketHome() {
   const router = useRouter();
-  const [markets, setMarkets] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [region, setRegion] = useState("전체");
-  const [sort, setSort] = useState("popular");
-  const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ mock_markets.json 불러오기
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const res = await fetch("http://192.168.0.67:8000/mock_data/mock_markets.json");
-        const data = await res.json();
-        setMarkets(data);
-      } catch (err) {
-        console.error("❌ mock_markets.json 로드 실패:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, []);
+  const [items, setItems] = useState([]);
+  const [region, setRegion] = useState('전체');
+  const [sortKey, setSortKey] = useState('인기순');
+
+  const [openRegionModal, setOpenRegionModal] = useState(false);
+  const [openSortModal,   setOpenSortModal]   = useState(false);
+
+  const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ✅ 스토어
+  const { isFavorite, likeDelta, syncFromList } = useFavoritesStore();
+
+  const load = useCallback(async () => {
+    try {
+      setError(null);
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/mock_data/mock_markets.json`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const list = Array.isArray(json) ? json : (json.items ?? []);
+
+      // 최신순 정렬용 보강
+      const now = Date.now();
+      const enriched = list.map((it, idx) => ({
+        ...it,
+        _idx: idx,
+        _createdAt: Number(it?.createdAt ?? it?.updatedAt ?? (now - idx * 1000)),
+        rating: Number(it?.rating ?? 0),
+        likes:  Number(it?.likes  ?? 0),
+        price:  Number(it?.price  ?? 0),
+      }));
+
+      setItems(enriched);
+      syncFromList(enriched); // ✅ 상세에서 필요할 수 있는 기본 정보 동기화
+    } catch (e) {
+      setError(e.message || '네트워크 오류');
+    } finally {
+      setLoading(false);
+    }
+  }, [syncFromList]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }, [load]);
 
   // ✅ 검색 / 필터 / 정렬
   const filtered = useMemo(() => {
@@ -60,75 +90,135 @@ export default function MarketHome() {
       );
     }
 
-    switch (sort) {
-      case "review":
-        arr.sort((a, b) => b.rating - a.rating);
-        break;
-      case "new":
-        arr.sort((a, b) => Number(b.id) - Number(a.id));
-        break;
-      default:
-        arr.sort((a, b) => b.likes - a.likes);
-        break;
+  // 정렬
+  const sortedItems = useMemo(() => {
+    const arr = [...filteredItems];
+    if (sortKey === '인기순') {
+      arr.sort((a, b) => (b.likes - a.likes) || (b.rating - a.rating));
+    } else if (sortKey === '후기순') {
+      arr.sort((a, b) => (b.rating - a.rating) || (b.likes - a.likes));
+    } else {
+      arr.sort((a, b) => (b._createdAt - a._createdAt) || (b._idx - a._idx));
     }
 
     return arr;
   }, [markets, region, sort, searchQuery]);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => router.push({ pathname: "/market/product/[id]", params: { id: item.id } })}
-      style={styles.card}
-    >
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardLoc}>📍 {item.location}</Text>
-        <Text style={styles.cardDesc} numberOfLines={2}>
-          {item.desc}
-        </Text>
-        <View style={styles.cardMeta}>
+  const renderItem = ({ item }) => {
+    const fav = isFavorite(String(item.id));
+    const likesShown = Number(item.likes) + (likeDelta[String(item.id)] ?? 0); // ✅ 상세에서 +1 반영
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: '/market/product/[id]',
+            params: { id: String(item.id), title: item.title },
+          })
+        }
+      >
+        <View style={styles.thumbWrap}>
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.thumb} />
+          ) : (
+            <View style={[styles.thumb, { backgroundColor: '#dfe9ef' }]} />
+          )}
+        </View>
+        <View style={{ flex: 1, paddingRight: 6 }}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.location} numberOfLines={1}>📍 {item.location}</Text>
+          {!!item.desc && (<Text style={styles.desc} numberOfLines={2}>{item.desc}</Text>)}
           <View style={styles.metaRow}>
-            <Ionicons name="star" size={14} color="#1f7a8c" />
-            <Text style={styles.metaText}>{item.rating.toFixed(1)}</Text>
-          </View>
-          <View style={[styles.metaRow, { marginLeft: 12 }]}>
-            <Ionicons name="heart" size={14} color="#1f7a8c" />
-            <Text style={styles.metaText}>{item.likes}</Text>
+            <View style={styles.metaChip}>
+              <Ionicons name="star" size={14} color="#0f93a6" />
+              <Text style={styles.metaText}>{Number(item.rating ?? 0).toFixed(1)}</Text>
+            </View>
+            <View style={[styles.metaChip, { marginLeft: 10 }]}>
+              <Ionicons name={fav ? "heart" : "heart-outline"} size={14} color="#0f93a6" />
+              <Text style={styles.metaText}>{likesShown}</Text>
+            </View>
+            <View style={{ flex: 1 }} />
+            <Text style={styles.price}>₩{Number(item.price ?? 0).toLocaleString()}</Text>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading && !items.length) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <Header onBack={() => router.back()} onWishlist={() => router.push('/market/wishlist')} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={styles.root}>
-      <Header title="로컬 특산물 구경하기" />
-      <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#1f7a8c" style={{ marginTop: 40 }} />
-        ) : (
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <View style={{ paddingHorizontal: 12 }}>
-                {/* 검색 */}
-                <View style={styles.searchBar}>
-                  <Ionicons name="search" size={18} color="#9aa7b3" />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="상품명 또는 설명으로 검색"
-                    placeholderTextColor="#9aa7b3"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                  {searchQuery !== "" && (
-                    <TouchableOpacity onPress={() => setSearchQuery("")}>
-                      <Ionicons name="close-circle" size={18} color="#9aa7b3" />
+      {/* 상단바 */}
+      <Header onBack={() => router.back()} onWishlist={() => router.push('/market/wishlist')} />
+
+      {/* 검색창 */}
+      <View style={styles.searchRow}>
+        <Ionicons name="search" size={18} color="#8aa0ad" />
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder="상품명 또는 설명으로 검색"
+          placeholderTextColor="#9fb0bb"
+          style={styles.searchInput}
+          returnKeyType="search"
+        />
+      </View>
+
+      {/* 정렬/지역 드롭다운 한 줄 배치 */}
+      <View style={styles.dropdownRow}>
+        {/* 정렬 기준 */}
+        <View style={styles.dropdownCol}>
+          <TouchableOpacity
+            onPress={() => setOpenSortModal(true)}
+            activeOpacity={0.9}
+            style={styles.dropdownButton}
+          >
+            <Text style={styles.dropdownText}>정렬: {sortKey}</Text>
+            <Ionicons name="chevron-down" size={18} color="#6b7a86" />
+          </TouchableOpacity>
+
+          <Modal
+            visible={openSortModal}
+            animationType="fade"
+            transparent
+            onRequestClose={() => setOpenSortModal(false)}
+          >
+            <TouchableOpacity
+              style={styles.modalBackdrop}
+              activeOpacity={1}
+              onPressOut={() => setOpenSortModal(false)}
+            >
+              <View style={styles.modalSheet}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>정렬 기준</Text>
+                </View>
+                <ScrollView>
+                  {SORT_LABELS.map(label => (
+                    <TouchableOpacity
+                      key={label}
+                      onPress={() => { setSortKey(label); setOpenSortModal(false); }}
+                      style={[
+                        styles.modalItem,
+                        label === sortKey && { backgroundColor: '#f0fbfe' }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.modalItemText,
+                        label === sortKey && { fontWeight: '800' }
+                      ]}>
+                        {label}
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -173,24 +263,73 @@ export default function MarketHome() {
                   })}
                 </View>
               </View>
-            }
-            contentContainerStyle={{ paddingBottom: 24 }}
-          />
-        )}
-      </SafeAreaView>
+            </TouchableOpacity>
+          </Modal>
+        </View>
+      </View>
+
+      {/* 오류표시 */}
+      {!!error && (
+        <Text style={{ color: 'red', marginTop: 6, marginLeft: 16 }}>
+          불러오기 실패: {error}
+        </Text>
+      )}
+
+      {/* 목록 */}
+      <FlatList
+        data={sortedItems}
+        keyExtractor={(it, idx) => String(it.id ?? idx)}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, paddingTop: 10 }}
+        ItemSeparatorComponent={() => <View style={{ height: 14 }} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+          !loading && (
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Text style={{ color: '#6b7a86' }}>조건에 맞는 상품이 없습니다.</Text>
+            </View>
+          )
+        }
+      />
+    </View>
+  );
+}
+
+function Header({ onBack, onWishlist }) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={onBack} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="chevron-back" size={22} color="#0f3c45" />
+      </TouchableOpacity>
+
+      <Text style={styles.headerTitle}>로컬 특산물 구경하기</Text>
+
+      <TouchableOpacity onPress={onWishlist} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <Ionicons name="heart" size={22} color="#ff4d6d" />
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#fff" },
-  safe: { flex: 1, backgroundColor: "#fff" },
-  searchBar: {
-    marginTop: 10,
-    marginBottom: 10,
-    backgroundColor: "#f2f5f6",
-    height: 40,
-    borderRadius: 14,
+  root: { flex: 1, backgroundColor: '#f1f7fa', paddingTop: 0},
+
+  header: {
+    height: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    backgroundColor: '#f1f7fa',
+    justifyContent: 'space-between',
+  },
+  headerTitle: { textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#0f3c45' },
+
+  searchRow: {
+    marginTop: 8,
+    marginHorizontal: 16,
+    backgroundColor: '#eaf0f4',
+    borderRadius: 12,
+    height: 44,
     paddingHorizontal: 12,
     alignItems: "center",
     flexDirection: "row",
