@@ -29,9 +29,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      {/* JSX 안에서는 이런 형태로 여러 줄 주석을 사용해야 합니다.
-        슬래시 두 개(//)를 사용하면 텍스트로 인식되어 오류가 발생합니다.
-      */}
       <Text style={styles.title}>소소행 로그인</Text>
       <TextInput
         style={styles.input}
@@ -87,13 +84,13 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontSize: 16 },
   link: { color: "#007BFF", marginTop: 15, fontSize: 14 },
 });
-
 /*
+
 
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-// apiClient는 지금 사용하지 않으므로 주석 처리하거나 남겨둬도 괜찮습니다.
+// apiClient는 지금 사용하지 않으므로 주석 처리하거a나 남겨둬도 괜찮습니다.
 // import apiClient from "../utils/apiClient"; 
 
 export default function LoginScreen() {
