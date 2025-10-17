@@ -42,7 +42,7 @@ export default function WishlistScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Ionicons name="chevron-back" size={22} color="#0f3c45" />
@@ -63,7 +63,7 @@ export default function WishlistScreen() {
           </View>
         )}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

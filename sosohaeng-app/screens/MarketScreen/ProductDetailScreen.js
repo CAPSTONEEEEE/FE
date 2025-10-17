@@ -297,5 +297,4 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 16, fontWeight: "900", color: "#0f3c45" },
   paragraph: { marginTop: 6, lineHeight: 21, color: "#455e68" },
-}
-);
+});
