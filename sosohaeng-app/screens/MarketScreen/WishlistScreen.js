@@ -18,8 +18,15 @@ export default function WishlistScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 8 }}>위시리스트</Text>
+    <View style={styles.root}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Ionicons name="chevron-back" size={22} color="#0f3c45" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>위시리스트</Text>
+        <View style={{ width: 22 }} />
+      </View>
+
       <FlatList
         data={list}
         keyExtractor={(it, idx) => `${it.id ?? idx}`}
