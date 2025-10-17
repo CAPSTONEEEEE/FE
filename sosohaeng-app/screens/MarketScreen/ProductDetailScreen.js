@@ -1,5 +1,5 @@
 // screens/MarketScreen/ProductDetailScreen.js
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -99,14 +99,11 @@ export default function ProductDetailScreen(props) {
     return () => { alive = false; };
   }, [id, upsertItem]);
 
-export default function ProductDetailScreen() {
-  const { id } = useLocalSearchParams();
-  const item = useMemo(() => PRODUCT_MAP[id], [id]);
   const router = useRouter();
   const navigation = useNavigation();
   useEffect(() => { navigation.setOptions({ headerShown: false }); }, [navigation]);
 
-  if (!item) {
+  if (!id || (!item && !fetching)) {
     return (
       <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <Text>상품 정보를 찾을 수 없습니다.</Text>
@@ -150,9 +147,13 @@ export default function ProductDetailScreen() {
             showsHorizontalScrollIndicator={false}
             style={{ height: 230, backgroundColor: "#f1f7fa" }}
           >
-            {item.images.map((uri, idx) => (
-              <Image key={idx} source={{ uri }} style={styles.heroImage} />
-            ))}
+            {(item?.images?.length ? item.images : [null]).map((uri, idx) =>
+              uri ? (
+                <Image key={idx} source={{ uri }} style={styles.heroImage} />
+              ) : (
+                <View key={idx} style={[styles.heroImage, { backgroundColor: "#e6eef2" }]} />
+              )
+            )}
           </ScrollView>
 
           {/* ✅ 상품명 + 별/하트(빨간 영역으로 이동) */}
