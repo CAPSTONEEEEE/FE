@@ -3,42 +3,80 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, Touc
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { sendChatbotMessage } from '../../src/config/api_Recommend';
 
 export default function ChatbotRecommend({ navigation }) {
   const [messages, setMessages] = useState([
     { 
       id: 0, 
-      text: '안녕하세요! 당신의 여행을 도와드릴 &&&입니다!\n\n### 문구 추가 예정 ###', 
+      text: '안녕하세요! 당신의 여행을 도와드릴 소소행 챗봇입니다.\n어떤 여행지를 찾고 계신가요?', 
       user: 'chatbot', 
       image: require('../../assets/icons/chatbot.png')
     },
   ]);
   const [input, setInput] = useState('');
   const inputRef = useRef(null);
+  const scrollViewRef = useRef(null);
+  const [loading, setLoading] = useState(false); // <-- 로딩 상태 추가
 
   useEffect(() => {
+    // 키보드가 나타났을 때 스크롤을 맨 아래로 이동
     const keyboardDidShowListener = Keyboard.addListener(
       'keyboardDidShow',
       () => {
-        // 키보드가 나타났을 때 수행할 작업
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ animated: true });
+        }
       }
     );
-
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-
+    // 컴포넌트 언마운트 시 리스너 제거
     return () => {
       keyboardDidShowListener.remove();
     };
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => { // <-- async 함수로 변경
     if (input.trim() === '') return;
-    const newMessage = { id: messages.length, text: input, user: 'user' };
-    setMessages([...messages, newMessage]);
+
+    // 1. 사용자 메시지 추가
+    const userMessage = input;
+    const newMessage = { id: messages.length, text: userMessage, user: 'user' };
+    setMessages(prevMessages => [...prevMessages, newMessage]);
     setInput('');
-    // TODO: 여기에 GPT API 호출 로직 추가
+    
+    // 2. 로딩 상태 시작 (챗봇 응답 대기)
+    setLoading(true);
+    
+    // 3. 백엔드 API 호출
+    try {
+      const gptResponse = await sendChatbotMessage(userMessage); // <-- API 호출
+      
+      // 4. 챗봇 응답 메시지 추가
+      const chatbotResponse = {
+        id: messages.length + 1, // 새로운 ID 부여
+        text: gptResponse.response,
+        user: 'chatbot',
+        image: require('../../assets/icons/chatbot.png')
+      };
+      setMessages(prevMessages => [...prevMessages, chatbotResponse]);
+    } catch (e) {
+      // API 호출 실패 시 오류 메시지 추가
+      const errorMessage = {
+        id: messages.length + 1,
+        text: '오류가 발생했습니다. 다시 시도해 주세요.',
+        user: 'chatbot',
+        image: require('../../assets/icons/chatbot.png')
+      };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+      console.error('API 호출 실패:', e);
+    } finally {
+      // 5. 로딩 상태 종료
+      setLoading(false);
+      // 스크롤을 맨 아래로 이동
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollToEnd({ animated: true });
+      }
+    }
   };
 
   return (
@@ -55,9 +93,9 @@ export default function ChatbotRecommend({ navigation }) {
         }
       />
       
-      <ScrollView style={styles.messageList} contentContainerStyle={styles.messageListContent}>
-        {messages.map((message) => (
-          <View key={message.id} style={message.user === 'user' ? styles.userMessageRow : styles.chatbotMessageRow}>
+      <ScrollView ref={scrollViewRef} style={styles.messageList} contentContainerStyle={styles.messageListContent}>
+        {messages.map((message, index) => (
+          <View key={index} style={message.user === 'user' ? styles.userMessageRow : styles.chatbotMessageRow}>
             {message.user === 'chatbot' && message.image && (
               <Image source={message.image} style={styles.profileImage} />
             )}
@@ -71,11 +109,19 @@ export default function ChatbotRecommend({ navigation }) {
             </View>
           </View>
         ))}
+        {loading && ( // <-- 로딩 중 표시
+          <View style={styles.chatbotMessageRow}>
+            <Image source={require('../../assets/icons/chatbot.png')} style={styles.profileImage} />
+            <View style={styles.messageBubble}>
+              <Text style={styles.messageText}>입력 중...</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <View style={styles.inputContainer}>
           <TouchableOpacity style={styles.inputIcon}>
@@ -90,7 +136,11 @@ export default function ChatbotRecommend({ navigation }) {
             placeholderTextColor="#999"
           />
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Ionicons name="send" size={20} color="#fff" />
+            {loading ? ( // <-- 로딩 중 아이콘 변경
+              <Text>...</Text>
+            ) : (
+              <Ionicons name="send" size={20} color="#fff" />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -98,77 +148,7 @@ export default function ChatbotRecommend({ navigation }) {
   );
 }
 
+// ... (기존 스타일 코드)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  messageList: {
-    flex: 1,
-    padding: 16,
-  },
-  messageListContent: {
-    justifyContent: 'flex-end',
-  },
-  // 나의 메시지 행을 위한 스타일
-  userMessageRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 8,
-  },
-  // 챗봇 메시지 행을 위한 스타일
-  chatbotMessageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 8,
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-    overflow: 'hidden',
-  },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 20,
-    maxWidth: '80%',
-  },
-  userBubble: {
-    backgroundColor: '#e1ffc7',
-  },
-  chatbotBubble: {
-    backgroundColor: '#fff',
-  },
-  messageText: {
-    fontSize: 16,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    padding: 8,
-    paddingHorizontal: 12,
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  textInput: {
-    flex: 1,
-    padding: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 24,
-    fontSize: 16,
-  },
-  sendButton: {
-    backgroundColor: '#007aff',
-    borderRadius: 24,
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
+  // ... (기존 스타일)
 });
