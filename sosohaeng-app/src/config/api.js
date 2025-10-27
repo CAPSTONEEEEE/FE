@@ -27,3 +27,5 @@ if (!base) {
 }
 
 export const API_BASE_URL = base;
+
+console.log("✅ 현재 설정된 API_BASE_URL:", API_BASE_URL);

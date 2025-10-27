@@ -14,6 +14,8 @@ import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { API_BASE_URL } from "../../src/config/api";
 import useFavoritesStore from "../stores/favoritesStore";
 
+const SERVER_ROOT_URL = API_BASE_URL.replace("/api/v1", ""); //수정
+
 export default function ProductDetailScreen(props) {
   const params = useLocalSearchParams();
   const id = useMemo(
@@ -37,7 +39,7 @@ export default function ProductDetailScreen(props) {
         setFetching(true);
 
         // 1) 상세 전용 JSON
-        const dRes = await fetch(`${API_BASE_URL}/mock_data/mock_productdetails.json`);
+        const dRes = await fetch(`${SERVER_ROOT_URL}/mock_data/mock_productdetails.json`); //수정
         const dJson = await dRes.json();
         const asMap = !Array.isArray(dJson) ? dJson : null;
         const asArr = Array.isArray(dJson) ? dJson : null;
