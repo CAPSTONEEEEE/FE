@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react-native';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
@@ -9,11 +9,34 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // 참고: require('../../assets/icons/chatbot.png') 경로는 프로젝트 구조에 따라 다를 수 있습니다.
 const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
 
-// 💡 챗봇 대본 정의 (정해진 답변 사용)
+// 💡 챗봇 대본 정의 (정해진 답변 사용 - RAG 효과)
 const CHATBOT_RESPONSES = {
-    "자연이 좋아": "자연 힐링 여행지를 찾으시는군요! 잠시만 기다려주세요. 당신에게 딱 맞는, 숲과 바다가 어우러진 최고의 장소를 찾아 추천드릴게요.",
-    "자연": "자연 힐링 여행지를 찾으시는군요! 잠시만 기다려주세요. 당신에게 딱 맞는, 숲과 바다가 어우러진 최고의 장소를 찾아 추천드릴게요.",
-    "바다": "시원한 바다 여행지를 찾으시는군요! 제주도나 강릉의 숨겨진 해변 명소를 중심으로 몇 군데 추천해 드릴게요.",
+    "자연이 좋아": 
+`"자연" 키워드를 입력받았습니다. RAG 구조를 통해 다음과 같은 추가 키워드로 확장했습니다.
+키워드: [자연, 휴양, 힐링, 숲]
+
+위의 키워드를 기반으로 당신에게 꼭 맞는 여행지 2곳을 추천해드립니다.
+
+**1. 제주도 서귀포 사려니 숲길**
+설명: 오름 사이를 잇는 숲길로 걷는 것만으로도 힐링이 됩니다. 빽빽한 삼나무와 맑은 공기가 특징입니다.
+주소: 제주 서귀포시 비자림로 1421
+
+**2. 장성 축령산 편백숲**
+설명: 국내 최대 규모의 편백숲으로 피톤치드가 가득한 산림치유의 공간입니다.
+주소: 전남 장성군 장성읍 임종국로 167`,
+    "자연": 
+`"자연" 키워드를 입력받았습니다. RAG 구조를 통해 다음과 같은 추가 키워드로 확장했습니다.
+키워드: [자연, 휴양, 힐링, 숲]
+
+위의 키워드를 기반으로 당신에게 꼭 맞는 여행지 2곳을 추천해드립니다.
+
+**1. 제주도 서귀포 사려니 숲길**
+설명: 오름 사이를 잇는 숲길로 걷는 것만으로도 힐링이 됩니다. 빽빽한 삼나무와 맑은 공기가 특징입니다.
+주소: 제주 서귀포시 비자림로 1421
+
+**2. 장성 축령산 편백숲**
+설명: 국내 최대 규모의 편백숲으로 피톤치드가 가득한 산림치유의 공간입니다.
+주소: 전남 장성군 장성읍 임종국로 167`,
     "디폴트": "죄송합니다. 아직 학습되지 않은 질문이거나 네트워크 문제로 답변을 드릴 수 없습니다. '자연이 좋아'라고 다시 입력해 보시겠어요?"
 };
 
@@ -70,8 +93,6 @@ export default function ChatbotRecommend({ navigation }) {
     let botResponseText;
     if (userMessageLower.includes('자연이 좋아') || userMessageLower.includes('자연')) {
         botResponseText = CHATBOT_RESPONSES["자연이 좋아"];
-    } else if (userMessageLower.includes('바다')) {
-        botResponseText = CHATBOT_RESPONSES["바다"];
     } else {
         botResponseText = CHATBOT_RESPONSES["디폴트"];
     }
