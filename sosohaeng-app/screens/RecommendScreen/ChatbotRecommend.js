@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // 참고: require('../../assets/icons/chatbot.png') 경로는 프로젝트 구조에 따라 다를 수 있습니다.
 const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
 
-// 💡 챗봇 대본 정의 (정해진 답변 사용 - RAG 효과)
+// 💡 챗봇 대본 정의 (정해진 답변 사용)
 const CHATBOT_RESPONSES = {
     "자연이 좋아": 
 `"자연" 키워드를 입력받았습니다. RAG 구조를 통해 다음과 같은 추가 키워드로 확장했습니다.
@@ -93,6 +93,8 @@ export default function ChatbotRecommend({ navigation }) {
     let botResponseText;
     if (userMessageLower.includes('자연이 좋아') || userMessageLower.includes('자연')) {
         botResponseText = CHATBOT_RESPONSES["자연이 좋아"];
+    } else if (userMessageLower.includes('바다')) {
+        botResponseText = CHATBOT_RESPONSES["바다"];
     } else {
         botResponseText = CHATBOT_RESPONSES["디폴트"];
     }
@@ -290,3 +292,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
