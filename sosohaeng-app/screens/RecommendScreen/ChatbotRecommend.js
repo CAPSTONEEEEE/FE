@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, Touc
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 // API 호출 오류를 피하기 위해 주석 처리하거나, 이전 단계의 가짜 응답을 사용합니다.
 // import { sendChatbotMessage } from '../../src/config/api_Recommend'; 
 
@@ -41,7 +44,8 @@ const CHATBOT_RESPONSES = {
 };
 
 
-export default function ChatbotRecommend({ navigation }) {
+export default function ChatbotRecommend() {
+  const navigation = useNavigation();
     // 💡 초기 메시지 수정: 질문 내용에 맞게 수정
   const [messages, setMessages] = useState([
     { 
@@ -55,6 +59,32 @@ export default function ChatbotRecommend({ navigation }) {
   const inputRef = useRef(null); 
   const scrollViewRef = useRef(null);
   const [loading, setLoading] = useState(false);
+
+  // 하단 탭바 + 홈바(안전영역) 높이만큼 띄우기 위한 계산
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+  const INPUT_BAR_HEIGHT = 30;                 // 입력창(버튼/패딩 포함) 대략 높이
+  const bottomGap = tabBarHeight + insets.bottom - 40;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation?.getParent?.();
+      if (!parent) return undefined;
+
+      // 탭바 숨기기
+      parent.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+
+      // 화면을 떠날 때 원상 복구
+      return () => {
+        parent.setOptions({
+          tabBarStyle: undefined, // 또는 기존 스타일이 있으면 그걸로 되돌리세요
+          // 예: { height: 56 } 처럼 프로젝트 기본 tabBarStyle이 있다면 그대로 넣기
+        });
+      };
+    }, [navigation])
+  );
 
   // 1. 컴포넌트 마운트 시 TextInput에 자동 포커스 
   useEffect(() => {
@@ -122,7 +152,7 @@ export default function ChatbotRecommend({ navigation }) {
   return (
     <SafeAreaView style={styles.page}>
       <TopBackBar
-        title="나에게 딱! 맞는 여행"
+        title={<Text style={styles.titleText}>나에게 딱! 맞는 여행"</Text>}
         right={
           <TouchableOpacity
             onPress={() => navigation.navigate('찜')}
@@ -135,7 +165,10 @@ export default function ChatbotRecommend({ navigation }) {
       <ScrollView 
         ref={scrollViewRef} 
         style={styles.messageList} 
-        contentContainerStyle={styles.messageListContent}
+        contentContainerStyle={[
+          styles.messageListContent,
+          { paddingBottom: bottomGap + INPUT_BAR_HEIGHT }
+        ]}
         onContentSizeChange={() => {
             if (scrollViewRef.current) {
                 scrollViewRef.current.scrollToEnd({ animated: true });
@@ -172,8 +205,9 @@ export default function ChatbotRecommend({ navigation }) {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { marginBottom: bottomGap }]}>
           <TouchableOpacity style={styles.inputIcon} disabled={loading}>
             <Ionicons name="add" size={24} color="#666" />
           </TouchableOpacity>
@@ -204,6 +238,7 @@ export default function ChatbotRecommend({ navigation }) {
 // 스타일 코드 (변화 없음)
 // ------------------------------------
 const styles = StyleSheet.create({
+  titleText: { fontSize: 17, fontWeight: '700', color: '#111' },
   page: { 
     flex: 1, 
     backgroundColor: '#fff',
