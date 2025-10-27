@@ -96,11 +96,11 @@ export default function FestivalScreen() {
             <Marker
               key={festival.id}
               coordinate={{
-                latitude: festival.mapy,
-                longitude: festival.mapx,
+                latitude: parseFloat(festival.mapy), // 👈 혹시 모를 타입 에러 방지
+                longitude: parseFloat(festival.mapx), // 👈 혹시 모를 타입 에러 방지
               }}
               title={festival.title}
-              onPress={() => navigation.navigate('FestivalDetailScreen', { festivalId: festival.id })}
+              onPress={() => router.push(`/festivals/${festival.id}`)}
             />
           ))}
         </MapView>

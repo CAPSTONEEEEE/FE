@@ -9,8 +9,20 @@ import { useLocalSearchParams } from 'expo-router';
  */
 const fetchFestivalById = async (id) => {
   if (!id) return null;
-  const { data } = await apiClient.get(`/festivals/${id}`);
-  return data;
+  const { data: rawFestival } = await apiClient.get(`/festivals/${id}`);
+  if (!rawFestival) return null;
+  return {
+    // FE가 기대하는 이름 = BE가 주는 이름
+    id: rawFestival.contentid, 
+    title: rawFestival.title,
+    location: rawFestival.addr1,        
+    event_start_date: rawFestival.eventstartdate, 
+    event_end_date: rawFestival.eventenddate,   
+    image_url: rawFestival.firstimage,  
+    mapx: rawFestival.mapx,
+    mapy: rawFestival.mapy,
+    description: rawFestival.description
+  };
 };
 
 // 2. props로 받던 '{ id }'를 제거합니다.
