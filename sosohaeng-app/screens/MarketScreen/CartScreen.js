@@ -1,8 +1,7 @@
 //screens/MarketScreen/CartScreen.js
 import { View, Text, FlatList } from "react-native";
 import { useEffect, useState } from "react";
-import api from "../../utils/apiClient";
-
+import api from '../../src/config/client'; 
 export default function CartScreen() {
   const [cart, setCart] = useState([]);
 

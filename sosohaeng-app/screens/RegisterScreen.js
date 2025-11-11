@@ -7,11 +7,11 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useRouter } from 'expo-router'; // 👈 1. Expo Router의 useRouter를 import
-import apiClient from "../utils/apiClient"; // 👈 2. apiClient를 import
+import { useRouter } from 'expo-router'; //  1. Expo Router의 useRouter를 import
+import apiClient from '../src/config/client';  // 2. apiClient를 import
 
 export default function RegisterScreen() {
-  const router = useRouter(); // 👈 3. router 객체 생성
+  const router = useRouter(); // 3. router 객체 생성
   
   const [email, setEmail] = useState("");
   const [name, setName] = useState(""); // UI에서는 'name'을 계속 사용
@@ -24,15 +24,15 @@ export default function RegisterScreen() {
     }
 
     try {
-      // 👈 4. apiClient를 사용하여 회원가입 API 호출
+      // 4. apiClient를 사용하여 회원가입 API 호출
       const response = await apiClient.post("/users/register", { 
         email, 
-        username: name, // 👈 5. 백엔드가 기대하는 'username'으로 이름을 바꿔서 전송
+        username: name, // 5. 백엔드가 기대하는 'username'으로 이름을 바꿔서 전송
         password 
       });
 
       Alert.alert("회원가입 성공", "이제 로그인할 수 있습니다.", [
-        // 👈 6. router.push를 사용하여 로그인 화면으로 이동
+        // 6. router.push를 사용하여 로그인 화면으로 이동
         { text: "확인", onPress: () => router.push("/login") },
       ]);
       
