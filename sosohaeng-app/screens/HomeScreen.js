@@ -31,8 +31,16 @@ export default function HomeScreen() {
 
         {/* 섹션 타이틀 */}
         <Text style={styles.title}>SoSoHaeng - 소소행</Text>
-        <Text style={styles.sectionTitle}>: RAG 기반 소도시 여행지 추천 및 로컬 커머스 통합 플랫폼</Text>
-        <Text style={styles.subtitle}>RAG(검색 증강 생성) 기술을 적용한 AI 챗봇이 숨겨진 소도시 여행지와 축제를 추천하고, 사용자와 소상공인 사이의 실시간 매칭·채팅 시스템을 지원하는 모바일 애플리케이션</Text>
+        <Text style={styles.subtitle}>: RAG 기반 소도시 여행지 추천 및 로컬 커머스 통합 플랫폼</Text>
+
+        <Text style={styles.sectionTitle}>🚉여행지 추천</Text>
+        <Text style={styles.subtitle}>당신의 취향과 요구사항을 분석해, 소도시의 숨은 명소를 AI가 똑똑하게 골라드립니다.</Text>
+
+        <Text style={styles.sectionTitle}>🎡축제 정보 제공</Text>
+        <Text style={styles.subtitle}>지금 가장 가까운 축제·행사 소식을 최신 일정과 함께 한눈에! 놓치기 아까운 즐길 거리를 바로 확인하세요.</Text>
+
+        <Text style={styles.sectionTitle}>🛍️로컬 마켓</Text>
+        <Text style={styles.subtitle}>지역 상인의 정직한 특산품을 모아보고, 판매자와 바로 대화해 안심하고 구매 연결까지 간편하게.</Text>
         {/* ...추가 컨텐츠 */}
       </ScrollView>
     </View>
@@ -60,12 +68,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#DDF1F4',
+    alignItems: 'center',     // 자식(이미지) 수평 중앙정렬
   },
   heroImage: {
-    width: '100%',
+    width: '80%',
     height: undefined,
     aspectRatio: 1,       // 1024x1024 → 정사각형
-    resizeMode: 'contain' // 이미지 잘리지 않게
+    resizeMode: 'contain', // 이미지 잘리지 않게
+    alignSelf: 'center',
   },
   sectionTitle: {
     marginTop: 18,

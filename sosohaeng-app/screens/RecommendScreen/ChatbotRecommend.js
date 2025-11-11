@@ -1,63 +1,148 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Keyboard, Image } from 'react-native';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { sendChatbotMessage } from '../../src/config/api_Recommend'; 
 
-export default function ChatbotRecommend({ navigation }) {
+const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
+
+export default function ChatbotRecommend() {
+  const navigation = useNavigation();
   const [messages, setMessages] = useState([
     { 
       id: 0, 
-      text: '안녕하세요! 당신의 여행을 도와드릴 &&&입니다!\n\n### 문구 추가 예정 ###', 
+      text: '안녕하십니까? 저는 여러분을 도와드릴 소소행입니다. 어떤 여행지를 찾고 계신가요?', 
       user: 'chatbot', 
-      image: require('../../assets/icons/chatbot.png')
+      image: CHATBOT_ICON
     },
   ]);
   const [input, setInput] = useState('');
-  const inputRef = useRef(null);
+  const inputRef = useRef(null); 
+  const scrollViewRef = useRef(null);
+  const [loading, setLoading] = useState(false);
 
+  // 하단 탭바 + 홈바(안전영역) 높이만큼 띄우기 위한 계산
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+  const INPUT_BAR_HEIGHT = 30;                 // 입력창(버튼/패딩 포함) 대략 높이
+  const bottomGap = tabBarHeight + insets.bottom - 40;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation?.getParent?.();
+      if (!parent) return undefined;
+
+      // 탭바 숨기기
+      parent.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+
+      // 화면을 떠날 때 원상 복구
+      return () => {
+        parent.setOptions({
+          tabBarStyle: undefined,
+        });
+      };
+    }, [navigation])
+  );
+
+  // 1. 컴포넌트 마운트 시 TextInput에 자동 포커스 
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      'keyboardDidShow',
-      () => {
-        // 키보드가 나타났을 때 수행할 작업
-      }
-    );
-
     if (inputRef.current) {
-      inputRef.current.focus();
+        const timer = setTimeout(() => {
+            inputRef.current.focus();
+        }, 300); 
+        return () => clearTimeout(timer);
     }
+  }, []); 
 
-    return () => {
-      keyboardDidShowListener.remove();
-    };
-  }, []);
+  // 2. 메시지가 업데이트되거나 콘텐츠 크기가 바뀔 때 스크롤을 맨 아래로 이동
+  useEffect(() => {
+    if (scrollViewRef.current) {
+        setTimeout(() => {
+            scrollViewRef.current.scrollToEnd({ animated: true });
+        }, 100); 
+    }
+  }, [messages]); 
+  
+  const handleSend = async () => {
+    if (input.trim() === '' || loading) return;
 
-  const handleSend = () => {
-    if (input.trim() === '') return;
-    const newMessage = { id: messages.length, text: input, user: 'user' };
-    setMessages([...messages, newMessage]);
+    const userMessage = input.trim();
+    
+    // 1. 사용자 메시지 추가
+    const newMessage = { id: messages.length, text: userMessage, user: 'user' };
+    setMessages(prevMessages => [...prevMessages, newMessage]);
     setInput('');
-    // TODO: 여기에 GPT API 호출 로직 추가
+    
+    // 2. 로딩 상태 시작 
+    setLoading(true);
+
+    let botResponseText = "죄송합니다. 챗봇이 답변을 생성하는 데 실패했습니다. 서버 상태를 확인해주세요. 😟";
+    
+    try {
+        // 3. API 호출
+        const apiResponse = await sendChatbotMessage(userMessage);
+        
+        // 4. 챗봇 응답 텍스트 추출
+        if (apiResponse && apiResponse.response) {
+            botResponseText = apiResponse.response;
+        }
+
+    } catch (error) {
+        console.error("챗봇 API 호출 실패:", error);
+    } finally {
+        // 5. 챗봇 응답 추가
+        const chatbotResponse = {
+            id: messages.length + 1,
+            text: botResponseText,
+            user: 'chatbot',
+            image: CHATBOT_ICON
+        };
+        
+        setMessages(prevMessages => [...prevMessages, chatbotResponse]);
+        setLoading(false);
+        
+        // 6. 키보드 닫히지 않도록 포커스 유지
+        if (inputRef.current) {
+            inputRef.current.focus(); 
+        }
+    }
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={styles.page}>
       <TopBackBar
-        title="나에게 딱! 맞는 여행"
+        title={<Text style={styles.titleText}>나에게 딱! 맞는 여행"</Text>}
         right={
           <TouchableOpacity
-            onPress={() => navigation.navigate('찜')}
+            // 라우팅 오류 해결을 위해 Main 스택을 통해 '찜'으로 이동하도록 수정
+            onPress={() => navigation.navigate('Main', { screen: '찜' })} 
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
           </TouchableOpacity>
         }
       />
-      
-      <ScrollView style={styles.messageList} contentContainerStyle={styles.messageListContent}>
-        {messages.map((message) => (
-          <View key={message.id} style={message.user === 'user' ? styles.userMessageRow : styles.chatbotMessageRow}>
+      <ScrollView
+        ref={scrollViewRef} 
+        style={styles.messageList} 
+        contentContainerStyle={[
+          styles.messageListContent,
+          { paddingBottom: bottomGap + INPUT_BAR_HEIGHT }
+        ]}
+        onContentSizeChange={() => {
+            if (scrollViewRef.current) {
+                scrollViewRef.current.scrollToEnd({ animated: true });
+            }
+        }}
+      >
+        {messages.map((message, index) => (
+          <View key={index} style={message.user === 'user' ? styles.userMessageRow : styles.chatbotMessageRow}>
             {message.user === 'chatbot' && message.image && (
               <Image source={message.image} style={styles.profileImage} />
             )}
@@ -67,30 +152,47 @@ export default function ChatbotRecommend({ navigation }) {
                 message.user === 'user' ? styles.userBubble : styles.chatbotBubble,
               ]}
             >
-              <Text style={styles.messageText}>{message.text}</Text>
+              <Text style={message.user === 'user' ? styles.userMessageText : styles.messageText}>
+                  {message.text}
+              </Text>
             </View>
           </View>
         ))}
+        {loading && (
+          <View style={styles.chatbotMessageRow}>
+            <Image source={CHATBOT_ICON} style={styles.profileImage} />
+            <View style={styles.chatbotBubble}>
+              <Text style={styles.messageText}>답변을 생성 중입니다...</Text>
+            </View>
+          </View>
+        )}
+        <View style={{ height: 10 }} /> {/* 메시지 목록 하단 여백 */}
       </ScrollView>
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
-        <View style={styles.inputContainer}>
-          <TouchableOpacity style={styles.inputIcon}>
+        <View style={[styles.inputContainer, { marginBottom: bottomGap }]}>
+          <TouchableOpacity style={styles.inputIcon} disabled={loading}>
             <Ionicons name="add" size={24} color="#666" />
           </TouchableOpacity>
           <TextInput
-            ref={inputRef}
+            ref={inputRef} 
             style={styles.textInput}
             value={input}
             onChangeText={setInput}
             placeholder="메시지를 입력하세요..."
             placeholderTextColor="#999"
+            onSubmitEditing={handleSend}
+            editable={!loading}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <Ionicons name="send" size={20} color="#fff" />
+          <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={loading || input.trim() === ''}>
+            {loading ? (
+              <Text style={{color: '#fff', fontSize: 16}}>...</Text>
+            ) : (
+              <Ionicons name="send" size={20} color="#fff" />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -98,77 +200,96 @@ export default function ChatbotRecommend({ navigation }) {
   );
 }
 
+// ------------------------------------
+// 스타일 코드
+// ------------------------------------
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
+  titleText: { fontSize: 17, fontWeight: '700', color: '#111' },
+  page: { 
+    flex: 1, 
+    backgroundColor: '#fff',
   },
+  // 대화 목록 (화면의 대부분을 차지해야 함)
   messageList: {
-    flex: 1,
-    padding: 16,
+    flex: 1, 
+    paddingHorizontal: 10,
   },
   messageListContent: {
-    justifyContent: 'flex-end',
+    paddingTop: 10,
+    paddingBottom: 20,
   },
-  // 나의 메시지 행을 위한 스타일
+  
+  // 챗봇 메시지 줄 (왼쪽 정렬)
+  chatbotMessageRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+    maxWidth: '85%', 
+  },
+  profileImage: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    backgroundColor: '#eee'
+  },
+  chatbotBubble: {
+    backgroundColor: '#F3F3F3', 
+    padding: 10,
+    borderRadius: 15,
+    borderTopLeftRadius: 0,
+  },
+  messageText: {
+    fontSize: 15,
+    color: '#333',
+  },
+  
+  // 사용자 메시지 줄 (오른쪽 정렬)
   userMessageRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     marginBottom: 8,
-  },
-  // 챗봇 메시지 행을 위한 스타일
-  chatbotMessageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 8,
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-    overflow: 'hidden',
-  },
-  messageBubble: {
-    padding: 12,
-    borderRadius: 20,
-    maxWidth: '80%',
+    marginLeft: '15%', 
   },
   userBubble: {
-    backgroundColor: '#e1ffc7',
+    backgroundColor: '#6D99FF', 
+    padding: 10,
+    borderRadius: 15,
+    borderTopRightRadius: 0,
   },
-  chatbotBubble: {
-    backgroundColor: '#fff',
+  userMessageText: {
+    fontSize: 15,
+    color: '#fff', 
   },
-  messageText: {
-    fontSize: 16,
-  },
+
+  // 입력창 컨테이너
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    padding: 8,
-    paddingHorizontal: 12,
+    borderTopColor: '#eee',
+    backgroundColor: '#fff',
   },
   inputIcon: {
-    marginRight: 8,
+    padding: 5,
   },
   textInput: {
     flex: 1,
-    padding: 12,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 24,
-    fontSize: 16,
+    height: 40,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    marginRight: 8,
+    fontSize: 15,
   },
   sendButton: {
-    backgroundColor: '#007aff',
-    borderRadius: 24,
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: '#6D99FF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
   },
 });

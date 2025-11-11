@@ -2,7 +2,7 @@ export const FESTIVAL_DATA = [
   {
     id: 1,
     contentid: "2750144",
-    title: "공주 반죽동 골목 축제 (샘플)",
+    title: "공주 반죽동 골목 축제 ",
     location: "충청남도 공주시 감영길 3",
     event_start_date: "2025-10-10",
     event_end_date: "2025-10-12",
@@ -13,7 +13,7 @@ export const FESTIVAL_DATA = [
   {
     id: 2,
     contentid: "2805408",
-    title: "부산 중앙번영로 야시장 (샘플)",
+    title: "부산 중앙번영로 야시장 ",
     location: "부산광역시 부산진구 중앙번영로 6",
     event_start_date: "2025-10-17",
     event_end_date: "2025-10-19",
@@ -24,7 +24,7 @@ export const FESTIVAL_DATA = [
   {
     id: 3,
     contentid: "3492550",
-    title: "가경 터미널시장 오일장 (샘플)",
+    title: "가경 터미널시장 오일장 ",
     location: "충청북도 청주시 흥덕구 가경동 1451-2",
     event_start_date: "2025-10-05",
     event_end_date: "2025-10-05",
@@ -35,7 +35,7 @@ export const FESTIVAL_DATA = [
   {
     id: 4,
     contentid: "2901530",
-    title: "안산 감골목장 치즈 체험 (샘플)",
+    title: "안산 감골목장 치즈 체험 ",
     location: "경기도 안산시 상록구 감골로 173",
     event_start_date: "2025-11-01",
     event_end_date: "2025-11-30",
@@ -46,7 +46,7 @@ export const FESTIVAL_DATA = [
   {
     id: 5,
     contentid: "1797757",
-    title: "부여 성왕로 문화의 거리 축제 (샘플)",
+    title: "부여 성왕로 문화의 거리 축제 ",
     location: "충청남도 부여군 부여읍 성왕로 286",
     event_start_date: "2025-09-27",
     event_end_date: "2025-09-29",
@@ -68,7 +68,7 @@ export const FESTIVAL_DATA = [
   {
     id: 7,
     contentid: "128211",
-    title: "경주 불국사 단풍 축제 (샘플)",
+    title: "경주 불국사 단풍 축제 ",
     location: "경상북도 경주시 불국로 385",
     event_start_date: "2025-10-25",
     event_end_date: "2025-11-09",
@@ -79,7 +79,7 @@ export const FESTIVAL_DATA = [
   {
     id: 8,
     contentid: "126511",
-    title: "순천만 갈대 축제 (샘플)",
+    title: "순천만 갈대 축제 ",
     location: "전라남도 순천시 순천만길 513-25",
     event_start_date: "2025-10-18",
     event_end_date: "2025-11-02",
@@ -90,7 +90,7 @@ export const FESTIVAL_DATA = [
   {
     id: 9,
     contentid: "248234",
-    title: "양양 서핑 페스티벌 (샘플)",
+    title: "양양 서핑 페스티벌 ",
     location: "강원도 양양군 현남면",
     event_start_date: "2025-09-20",
     event_end_date: "2025-09-22",
@@ -101,7 +101,7 @@ export const FESTIVAL_DATA = [
   {
     id: 10,
     contentid: "2701358",
-    title: "수원 화성문화제 (샘플)",
+    title: "수원 화성문화제 ",
     location: "경기도 수원시 팔달구 정조로 825",
     event_start_date: "2025-10-03",
     event_end_date: "2025-10-06",

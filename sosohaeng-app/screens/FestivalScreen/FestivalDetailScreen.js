@@ -2,21 +2,38 @@ import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../utils/apiClient'; // apiClient 경로는 실제 프로젝트에 맞게 확인해주세요.
+import { useLocalSearchParams } from 'expo-router';
 
 /**
  * 특정 ID의 축제 상세 정보를 백엔드로부터 가져오는 비동기 함수입니다.
  */
 const fetchFestivalById = async (id) => {
   if (!id) return null;
-  const { data } = await apiClient.get(`/festivals/${id}`);
-  return data;
+  const { data: rawFestival } = await apiClient.get(`/festivals/${id}`);
+  if (!rawFestival) return null;
+  return {
+    // FE가 기대하는 이름 = BE가 주는 이름
+    id: rawFestival.contentid, 
+    title: rawFestival.title,
+    location: rawFestival.addr1,        
+    event_start_date: rawFestival.eventstartdate, 
+    event_end_date: rawFestival.eventenddate,   
+    image_url: rawFestival.firstimage,  
+    mapx: rawFestival.mapx,
+    mapy: rawFestival.mapy,
+    description: rawFestival.description
+  };
 };
 
-// Expo Router 파일로부터 'id'를 prop으로 전달받습니다.
-export default function FestivalDetailScreen({ id }) {
+// 2. props로 받던 '{ id }'를 제거합니다.
+export default function FestivalDetailScreen() {
+  
+  // 3. hook을 사용해 URL에서 'id'를 가져옵니다.
+  const { id } = useLocalSearchParams(); 
+
   const { data: festival, isLoading, isError, error } = useQuery({
     queryKey: ['festival', id],
-    queryFn: () => fetchFestivalById(id),
+    queryFn: () => fetchFestivalById(id), // 👈 이제 이 'id'는 URL에서 온 값입니다.
     enabled: !!id,
   });
 

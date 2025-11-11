@@ -1,15 +1,18 @@
 // RandomRecommendScreen.js
 
-import { useRouter } from 'expo-router';
+// import { useRouter } from 'expo-router'; // ⬅️ useRouter 제거
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TopBackBar from '../../components/TopBackBar';
 import { Ionicons } from '@expo/vector-icons';
+// 💡 useNavigation 훅 임포트
+import { useNavigation } from '@react-navigation/native'; 
 
+// 💡 수정: navigation prop을 제거하고 훅을 사용합니다.
 export default function RandomRecommendScreen() {
-  //useRouter 훅을 사용
-  const router = useRouter();
+  // const router = useRouter(); // ⬅️ 제거. navigation을 사용합니다.
+  const navigation = useNavigation(); // 💡 useNavigation 훅을 사용하여 navigation 객체 가져옴
 
   const categories = [
     { title: '자연 힐링', emoji: '🏕️' },
@@ -19,12 +22,15 @@ export default function RandomRecommendScreen() {
   ];
 
   const handleCategoryPress = (category) => {
-    // RandomResult 화면의 실제 경로에 맞게 pathname을 확인하세요.
-    router.push({
-      pathname: '/(recommend)/result',
-      params: { title: category.title } // 객체 전체 대신 필요한 데이터만 전달하는 것이 좋습니다.
-    });
+    // RandomResultScreen.js에 등록된 이름인 'RandomResult'로 이동합니다.
+    // navigation 객체가 이제 훅을 통해 정의되었으므로 오류가 사라져야 합니다.
+    navigation.navigate('RandomResult', { title: category.title });
   };
+  
+  // '찜' 화면 이동 함수
+  const handleFavoritesPress = () => {
+    navigation.navigate('찜'); 
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -32,8 +38,7 @@ export default function RandomRecommendScreen() {
         title="어디로 떠나볼까?"
         right={
           <TouchableOpacity
-            // '찜' 화면의 실제 경로가 '/favorites'라고 가정했습니다.
-            onPress={() => router.push('/favorites')}
+            onPress={handleFavoritesPress} 
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
@@ -89,3 +94,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

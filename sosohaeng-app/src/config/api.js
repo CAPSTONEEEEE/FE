@@ -13,7 +13,7 @@ if (!base) {
 
   if (hostUri) {
     const host = hostUri.split(':')[0]; // 192.168.0.67
-    base = `http://${host}:8000`;
+    base = `http://{host}:8000`;
   }
 }
 
@@ -27,3 +27,5 @@ if (!base) {
 }
 
 export const API_BASE_URL = base;
+
+console.log("✅ 현재 설정된 API_BASE_URL:", API_BASE_URL);
