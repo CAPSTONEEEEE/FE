@@ -1,40 +1,25 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import apiClient from '../../utils/apiClient'; // apiClient 경로는 실제 프로젝트에 맞게 확인해주세요.
+import apiClient from '../../src/config/client'; 
 import { useLocalSearchParams } from 'expo-router';
 
-/**
- * 특정 ID의 축제 상세 정보를 백엔드로부터 가져오는 비동기 함수입니다.
- */
+const formatDate = (dateStr) => {
+  if (!dateStr || dateStr.length !== 8) return dateStr;
+  return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+};
 const fetchFestivalById = async (id) => {
   if (!id) return null;
-  const { data: rawFestival } = await apiClient.get(`/festivals/${id}`);
-  if (!rawFestival) return null;
-  return {
-    // FE가 기대하는 이름 = BE가 주는 이름
-    id: rawFestival.contentid, 
-    title: rawFestival.title,
-    location: rawFestival.addr1,        
-    event_start_date: rawFestival.eventstartdate, 
-    event_end_date: rawFestival.eventenddate,   
-    image_url: rawFestival.firstimage,  
-    mapx: rawFestival.mapx,
-    mapy: rawFestival.mapy,
-    description: rawFestival.description
-  };
+  const { data } = await apiClient.get(`/festivals/${id}`);
+  return data;
 };
-
-// 2. props로 받던 '{ id }'를 제거합니다.
 export default function FestivalDetailScreen() {
-  
-  // 3. hook을 사용해 URL에서 'id'를 가져옵니다.
   const { id } = useLocalSearchParams(); 
 
   const { data: festival, isLoading, isError, error } = useQuery({
     queryKey: ['festival', id],
-    queryFn: () => fetchFestivalById(id), // 👈 이제 이 'id'는 URL에서 온 값입니다.
-    enabled: !!id,
+    queryFn: () => fetchFestivalById(id),
+    enabled: !!id, // id가 있을 때만 쿼리 실행
   });
 
   if (isLoading) {
@@ -56,13 +41,26 @@ export default function FestivalDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Image source={{ uri: festival.image_url }} style={styles.poster} />
+      {/* BE가 'image_url'을 줍니다. */}
+      <Image 
+        source={{ uri: festival.image_url || 'https://placehold.co/400x240/eee/ccc?text=No+Image' }} 
+        style={styles.poster} 
+      />
       <View style={styles.content}>
+        {/* BE가 'title'을 줍니다. */}
         <Text style={styles.name}>{festival.title}</Text>
-        <Text style={styles.meta}>📍 {festival.location}</Text>
-        <Text style={styles.meta}>🗓 {`${festival.event_start_date} ~ ${festival.event_end_date}`}</Text>
+        {/* BE가 'location'을 줍니다. */}
+        <Text style={styles.meta}>📍 {festival.location || '위치 정보 없음'}</Text>
+        
+        {/* 5. 날짜 포맷팅 함수 적용 */}
+        <Text style={styles.meta}>
+          🗓 {`${formatDate(festival.event_start_date)} ~ ${formatDate(festival.event_end_date)}`}
+        </Text>
+        
         <Text style={styles.sectionTitle}>소개</Text>
-        <Text style={styles.description}>{festival.description || '상세 정보가 없습니다.'}</Text>
+        
+        {/* 6. 'description'이 아닌 'overview'를 사용합니다. */}
+        <Text style={styles.description}>{festival.overview || '상세 정보가 없습니다.'}</Text>
       </View>
     </ScrollView>
   );

@@ -1,36 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-// import { SafeAreaView } from 'react-native-safe-area-context'; 
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-//import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import apiClient from '../../utils/apiClient';
+
+import apiClient from '../../src/config/client'; 
 import { useRouter } from 'expo-router';
 
-
 const fetchFestivals = async () => {
+  // 1. BE가 page/size를 받지 않으므로, 파라미터 없이 호출합니다.
   const { data } = await apiClient.get('/festivals/');
   
-  // 'data'는 이제 [...] 배열입니다.
-  // 이 배열의 필드 이름을 FE 컴포넌트가 기대하는 이름으로 변경합니다.
-  
   if (!Array.isArray(data)) {
-    // 혹시 모를 에러 방지
     return []; 
   }
-
-  return data.map(festival => ({
-    // FE가 기대하는 이름(왼쪽) = BE가 주는 이름(오른쪽)
-    id: festival.contentid,          // 👈 'id'로 변경
-    title: festival.title,
-    location: festival.addr1,        // 👈 'location'으로 변경
-    event_start_date: festival.eventstartdate, // 👈 'event_start_date'로 변경
-    event_end_date: festival.eventenddate,   // 👈 'event_end_date'로 변경
-    image_url: festival.firstimage,  // 👈 'image_url'로 변경
-    mapx: festival.mapx,
-    mapy: festival.mapy,
-  }));
+  return data;
 };
 
 export default function FestivalScreen() {
@@ -59,23 +43,35 @@ export default function FestivalScreen() {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
+      // BE가 보낸 'id' (숫자)를 사용합니다.
       onPress={() => router.push(`/festivals/${item.id}`)}
     >
-      <Image source={{ uri: item.image_url }} style={styles.thumbnail} />
+      {/* BE가 보낸 'image_url'을 사용합니다. */}
+      <Image 
+        source={{ uri: item.image_url || 'https://placehold.co/80x80/eee/ccc?text=No+Image' }} 
+        style={styles.thumbnail} 
+      />
       <View style={styles.cardContent}>
+        {/* BE가 보낸 'title'을 사용합니다. */}
         <Text style={styles.name}>{item.title}</Text>
-        <Text style={styles.address}>📍 {item.location}</Text>
+        {/* BE가 보낸 'location'을 사용합니다. */}
+        <Text style={styles.address} numberOfLines={1}>📍 {item.location || '위치 정보 없음'}</Text>
+        {/* BE가 보낸 'event_start_date' ("YYYY-MM-DD")를 사용합니다. */}
         <Text style={styles.date}>🗓 {`${item.event_start_date} ~ ${item.event_end_date}`}</Text>
       </View>
     </TouchableOpacity>
   );
 
   const renderContent = () => {
+    const validFestivals = festivals?.filter(f => f.mapx && f.mapy);
     if (isLoading || !location) {
       return (
         <View style={styles.centered}>
           <ActivityIndicator size="large" />
-          <Text style={styles.infoText}>데이터를 불러오는 중...</Text>
+          <Text style={styles.infoText}>
+            {/* BE가 1077건을 처리하므로 시간이 좀 걸립니다. */}
+            2025년 축제 목록을 실시간으로 불러오는 중...
+          </Text>
         </View>
       );
     }
@@ -92,12 +88,12 @@ export default function FestivalScreen() {
           }}
           showsUserLocation={true}
         >
-          {!isError && festivals?.map(festival => (
+          {!isError && validFestivals?.map(festival => (
             <Marker
               key={festival.id}
               coordinate={{
-                latitude: parseFloat(festival.mapy), // 👈 혹시 모를 타입 에러 방지
-                longitude: parseFloat(festival.mapx), // 👈 혹시 모를 타입 에러 방지
+                latitude: parseFloat(festival.mapy), // BE가 'mapy'를 줍니다.
+                longitude: parseFloat(festival.mapx), // BE가 'mapx'를 줍니다.
               }}
               title={festival.title}
               onPress={() => router.push(`/festivals/${festival.id}`)}
@@ -114,7 +110,9 @@ export default function FestivalScreen() {
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={() => (
             <View style={styles.centered}>
-              <Text style={styles.infoText}>표시할 축제가 없습니다.</Text>
+              <Text style={styles.infoText}>
+                현재 진행 중인 2025년 축제가 없습니다.
+              </Text>
             </View>
           )}
         />
@@ -190,12 +188,14 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 20, // 텍스트 줄바꿈을 위해
     },
     infoText: {
       textAlign: 'center',
       marginTop: 20,
       color: '#888888',
       fontSize: 16,
+      lineHeight: 22, // 줄 간격
     },
     listContainer: {
         padding: 16,
@@ -253,4 +253,3 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
-

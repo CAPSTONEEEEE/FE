@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import apiClient from "../utils/apiClient"; 
+import apiClient from '../src/config/client'; 
 
 export default function LoginScreen() {
   const router = useRouter(); 
@@ -94,7 +94,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 // apiClient는 지금 사용하지 않으므로 주석 처리하거나 남겨둬도 괜찮습니다.
-// import apiClient from "../utils/apiClient"; 
+// import apiClient from '../../src/config/client';  
 
 export default function LoginScreen() {
   const router = useRouter(); 

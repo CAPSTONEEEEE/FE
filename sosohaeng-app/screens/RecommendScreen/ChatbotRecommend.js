@@ -74,7 +74,7 @@ export default function ChatbotRecommend() {
   const [messages, setMessages] = useState([
     { 
       id: 0, 
-      text: '안녕하십니까? 저는 여러분을 도와드릴 소소행입니다. 어떤 여행지를 찾고 계신가요?', 
+      text: '안녕하십니까? 저는 당신에게 맞는 완벽한 여행지 추천을 도와드릴 소소행입니다. 어떤 여행지를 찾고 계신가요? 원하는 여행지의 테마를 알려주세요 !', 
       user: 'chatbot', 
       image: CHATBOT_ICON
     },
