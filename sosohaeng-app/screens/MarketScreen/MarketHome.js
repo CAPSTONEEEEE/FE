@@ -174,7 +174,7 @@ export default function MarketHome() {
         />
       </View>
 
-      {/* 정렬/지역 드롭다운 한 줄 배치 */}
+      {/* 정렬/지역/상품등록 한 줄 배치 (3등분) */}
       <View style={styles.dropdownRow}>
         {/* 정렬 기준 */}
         <View style={styles.dropdownCol}>
@@ -277,6 +277,18 @@ export default function MarketHome() {
             </TouchableOpacity>
           </Modal>
         </View>
+
+        {/* ✅ 상품 등록 (같은 줄, 3등분) */}
+        <View style={styles.dropdownCol}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.registerButton}
+            onPress={() => router.push('/market/product/new')}
+          >
+            <Text style={styles.registerText}>상품 등록</Text>
+            <Ionicons name="add-circle-outline" size={18} color="#0f93a6" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 오류표시 */}
@@ -347,7 +359,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { marginLeft: 8, flex: 1, color: '#0f3c45' },
 
-  // 드롭다운 두 개 한 줄
+  // 드롭다운/등록 버튼 한 줄 (3등분)
   dropdownRow: {
     marginTop: 10,
     paddingHorizontal: 16,
@@ -365,6 +377,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   dropdownText: { fontWeight: '700', color: '#0f3c45' },
+
+  // 상품 등록 버튼 스타일 (동일 라인, 동일 높이)
+  registerButton: {
+    height: 40,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#e8f5f8',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between'
+  },
+  registerText: { fontWeight: '800', color: '#0f93a6' },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', padding: 20 },
   modalSheet: { backgroundColor: '#fff', borderRadius: 14, maxHeight: '70%', overflow: 'hidden' },
