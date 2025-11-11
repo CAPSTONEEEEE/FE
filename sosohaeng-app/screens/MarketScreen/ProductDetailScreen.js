@@ -173,14 +173,25 @@ export default function ProductDetailScreen(props) {
             </View>
           </View>
 
-          {/* ✅ 매장명 + 주소 + 채팅/찜 버튼(파란 영역으로 이동) */}
+          {/* 매장명 + 주소 + 문의/찜 버튼 */}
           <View style={[styles.shopBlock, { marginTop: 10 }]}>
             <Text style={styles.shopTitle}>{item.title}</Text>
             {!!item.location && <Text style={styles.location}>📍 {item.location}</Text>}
             <View style={styles.actionRow}>
-              <TouchableOpacity activeOpacity={0.9} style={styles.chatBtn}>
-                <Text style={styles.chatText}>채팅하기</Text>
+              {/* ⬇️ onPress 추가: 상품별 QnA 화면으로 이동 (Expo Router) */}
+              <TouchableOpacity
+                activeOpacity={0.9}
+                style={styles.chatBtn}
+                onPress={() =>
+                  router.push({
+                    pathname: "/market/product/[id]/qna",
+                    params: { id: String(id) },
+                  })
+                }
+              >
+                <Text style={styles.chatText}>문의하기</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 onPress={() => toggleFavorite({
                   id: item.id,
@@ -300,5 +311,4 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 16, fontWeight: "900", color: "#0f3c45" },
   paragraph: { marginTop: 6, lineHeight: 21, color: "#455e68" },
-}
-);
+});
