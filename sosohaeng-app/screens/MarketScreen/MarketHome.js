@@ -46,7 +46,8 @@ export default function MarketHome() {
       setError(null);
       setLoading(true);
       //const res = await fetch(`${API_BASE_URL}/mock_data/mock_markets.json`);
-      const res = await fetch(`${SERVER_ROOT_URL}/mock_data/mock_markets.json`); //수정
+      // 백엔드 market_router.py에 정의된 실제 상품 목록 조회 주소로 변경
+      const res = await fetch(`${SERVER_ROOT_URL}/products`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const list = Array.isArray(json) ? json : (json.items ?? []);
