@@ -3,17 +3,39 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndi
 // import { SafeAreaView } from 'react-native-safe-area-context'; 
 import MapView, { Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { useNavigation } from '@react-navigation/native';
+//import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../utils/apiClient';
+import { useRouter } from 'expo-router';
+
 
 const fetchFestivals = async () => {
   const { data } = await apiClient.get('/festivals/');
-  return data.items;
+  
+  // 'data'는 이제 [...] 배열입니다.
+  // 이 배열의 필드 이름을 FE 컴포넌트가 기대하는 이름으로 변경합니다.
+  
+  if (!Array.isArray(data)) {
+    // 혹시 모를 에러 방지
+    return []; 
+  }
+
+  return data.map(festival => ({
+    // FE가 기대하는 이름(왼쪽) = BE가 주는 이름(오른쪽)
+    id: festival.contentid,          // 👈 'id'로 변경
+    title: festival.title,
+    location: festival.addr1,        // 👈 'location'으로 변경
+    event_start_date: festival.eventstartdate, // 👈 'event_start_date'로 변경
+    event_end_date: festival.eventenddate,   // 👈 'event_end_date'로 변경
+    image_url: festival.firstimage,  // 👈 'image_url'로 변경
+    mapx: festival.mapx,
+    mapy: festival.mapy,
+  }));
 };
 
 export default function FestivalScreen() {
-  const navigation = useNavigation();
+  //const navigation = useNavigation();
+  const router = useRouter();
   const [location, setLocation] = useState(null);
   const [viewMode, setViewMode] = useState('map');
 
@@ -37,7 +59,7 @@ export default function FestivalScreen() {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => navigation.navigate('FestivalDetailScreen', { festivalId: item.id })}
+      onPress={() => router.push(`/festivals/${item.id}`)}
     >
       <Image source={{ uri: item.image_url }} style={styles.thumbnail} />
       <View style={styles.cardContent}>
@@ -74,11 +96,11 @@ export default function FestivalScreen() {
             <Marker
               key={festival.id}
               coordinate={{
-                latitude: festival.mapy,
-                longitude: festival.mapx,
+                latitude: parseFloat(festival.mapy), // 👈 혹시 모를 타입 에러 방지
+                longitude: parseFloat(festival.mapx), // 👈 혹시 모를 타입 에러 방지
               }}
               title={festival.title}
-              onPress={() => navigation.navigate('FestivalDetailScreen', { festivalId: festival.id })}
+              onPress={() => router.push(`/festivals/${festival.id}`)}
             />
           ))}
         </MapView>

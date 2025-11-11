@@ -17,6 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
+const SERVER_ROOT_URL = API_BASE_URL.replace("/api/v1", ""); //수정 
 import useFavoritesStore from '../stores/favoritesStore'; // ✅ 즐겨찾기 스토어
 
 const REGIONS = ['전체','서울','경기','강원','부산','대구','인천','광주','대전','울산','세종','충북','충남','전북','전남','경북','경남','제주'];
@@ -44,7 +45,8 @@ export default function MarketHome() {
     try {
       setError(null);
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/mock_data/mock_markets.json`);
+      //const res = await fetch(`${API_BASE_URL}/mock_data/mock_markets.json`);
+      const res = await fetch(`${SERVER_ROOT_URL}/mock_data/mock_markets.json`); //수정
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const list = Array.isArray(json) ? json : (json.items ?? []);
