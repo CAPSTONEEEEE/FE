@@ -1,314 +1,246 @@
-// screens/MarketScreen/ProductDetailScreen.js
-import React, { useEffect, useMemo, useState } from "react";
+// screens/MarketScreen/ProductCreateScreen.js
+import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
-  Image,
-  ScrollView,
   TouchableOpacity,
+  Image,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import { API_BASE_URL } from "../../src/config/api";
-import useFavoritesStore from "../stores/favoritesStore";
 
-const SERVER_ROOT_URL = API_BASE_URL.replace("/api/v1", ""); //수정
-
-export default function ProductDetailScreen(props) {
-  const params = useLocalSearchParams();
-  const id = useMemo(
-    () => String(params?.id ?? props?.productId ?? props?.route?.params?.id ?? ""),
-    [params?.id, props?.productId, props?.route?.params?.id]
-  );
-
-  const [item, setItem] = useState(null);
-  const [fetching, setFetching] = useState(true);
-
-  const { isFavorite, toggleFavorite, likeDelta, upsertItem } = useFavoritesStore();
-  const liked = isFavorite(id);
-  const delta = likeDelta[id] ?? 0;
-
-  useEffect(() => {
-    if (!id) return;
-    let alive = true;
-
-    (async () => {
-      try {
-        setFetching(true);
-
-        // 1) 상세 전용 JSON
-        const dRes = await fetch(`${SERVER_ROOT_URL}/mock_data/mock_productdetails.json`); //수정
-        const dJson = await dRes.json();
-        const asMap = !Array.isArray(dJson) ? dJson : null;
-        const asArr = Array.isArray(dJson) ? dJson : null;
-        let detail =
-          (asMap && asMap[id]) ||
-          (asArr && asArr.find((o) => String(o.id) === String(id)));
-
-        // 2) 없으면 목록에서 보강
-        if (!detail) {
-          const mRes = await fetch(`${API_BASE_URL}/mock_data/mock_markets.json`);
-          const mJson = await mRes.json();
-          const list = Array.isArray(mJson) ? mJson : (mJson.items ?? []);
-          const found =
-            list.find((p) => String(p.id) === String(id)) ||
-            list.find((p) => String(p.slug ?? p.code ?? p.key) === String(id)) ||
-            list.find((p) => String(p.name) === String(id));
-
-          if (found) {
-            detail = {
-              id: String(found.id ?? id),
-              title: found.title ?? found.seller ?? "로컬 스토어",
-              productName: found.productName ?? found.title ?? "상품",
-              region: found.region ?? "",
-              location: found.location ?? "",
-              rating: Number(found.rating ?? 4.2),
-              likes: Number(found.likes ?? 0),
-              price: Number(found.price ?? 0),
-              sellerNote: found.sellerNote ?? found.description ?? "",
-              images: Array.isArray(found.images) ? found.images : [found.image].filter(Boolean),
-              summary: found.summary ?? found.desc ?? "",
-              specs: Array.isArray(found.specs) ? found.specs : [],
-              delivery: Array.isArray(found.delivery) ? found.delivery : ["전국 택배 배송"],
-            };
-          }
-        }
-
-        if (alive) {
-          setItem(detail ?? null);
-          if (detail) {
-            upsertItem({
-              id: detail.id,
-              title: detail.productName ?? detail.title,
-              image: detail.images?.[0],
-              location: detail.location ?? "",
-              price: Number(detail.price ?? 0),
-              rating: Number(detail.rating ?? 0),
-              likes: Number(detail.likes ?? 0),
-              region: detail.region ?? "",
-            });
-          }
-        }
-      } catch (e) {
-        if (alive) setItem(null);
-      } finally {
-        if (alive) setFetching(false);
-      }
-    })();
-
-    return () => { alive = false; };
-  }, [id, upsertItem]);
-
+export default function ProductCreateScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
-  useEffect(() => { navigation.setOptions({ headerShown: false }); }, [navigation]);
 
-  if (!id || (!item && !fetching)) {
-    return (
-      <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>상품 정보를 찾을 수 없습니다.</Text>
-      </SafeAreaView>
-    );
-  }
-  if (fetching && !item) {
-    return (
-      <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>불러오는 중…</Text>
-      </SafeAreaView>
-    );
-  }
+  // ✅ BE 요구 필드 (최소): name, price, market_id
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [marketId, setMarketId] = useState(""); // 숫자 문자열로 입력
 
-  const likesShown = Number(item.likes ?? 0) + delta;
+  // 선택 필드(있으면 BE가 받아 저장): summary, description, stock, unit, category_id, region_id
+  const [summary, setSummary] = useState("");
+  const [description, setDescription] = useState("");
+  const [stock, setStock] = useState("0");
+  const [unit, setUnit] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [regionId, setRegionId] = useState("");
+
+  const [image, setImage] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const pickImage = async () => {
+    // 권한 요청
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("권한 필요", "앨범 접근 권한이 필요합니다.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      setImage(result.assets?.[0] ?? null);
+    }
+  };
+
+  const submit = async () => {
+    // 필수값 검증
+    if (!name.trim()) return Alert.alert("확인", "상품명을 입력하세요.");
+    if (!price || isNaN(Number(price))) return Alert.alert("확인", "가격을 숫자로 입력하세요.");
+    if (!marketId || isNaN(Number(marketId))) return Alert.alert("확인", "market_id를 숫자로 입력하세요.");
+
+    try {
+      setSubmitting(true);
+
+      const fd = new FormData();
+      // ⚠️ 폼 데이터는 문자열로 전송 (서버에서 형 변환)
+      fd.append("name", String(name).trim());
+      fd.append("price", String(price));            // float
+      fd.append("market_id", String(marketId));     // int
+
+      if (summary.trim()) fd.append("summary", summary);
+      if (description.trim()) fd.append("description", description);
+      if (stock && !isNaN(Number(stock))) fd.append("stock", String(stock)); // int
+      if (unit.trim()) fd.append("unit", unit);
+      if (categoryId && !isNaN(Number(categoryId))) fd.append("category_id", String(categoryId));
+      if (regionId && !isNaN(Number(regionId))) fd.append("region_id", String(regionId));
+
+      if (image?.uri) {
+        // filename/type 보정
+        const guessedName =
+          image.fileName ||
+          (image.uri.split("/").pop() || `upload_${Date.now()}.jpg`);
+        // Android는 mimeType이 없는 경우가 있어 기본값 설정
+        const guessedType = image.mimeType || "image/jpeg";
+
+        fd.append("image", {
+          uri: image.uri,
+          name: guessedName,
+          type: guessedType,
+        });
+      }
+
+      // ✅ Content-Type은 직접 지정하지 말 것(브라우저/네이티브가 boundary 포함 헤더 자동 설정)
+      const res = await fetch(`${API_BASE_URL}/markets/products`, {
+        method: "POST",
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "상품 등록 실패");
+      }
+
+      const data = await res.json();
+      Alert.alert("완료", `상품이 등록되었습니다. (#${data.id})`);
+      // 필요 시 상세 화면으로 이동
+      // router.push(`/market/product/${data.id}`);
+      router.back();
+    } catch (err) {
+      Alert.alert("에러", err?.message ?? "등록 중 문제가 발생했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <View style={styles.root}>
-      <SafeAreaView style={styles.safe} edges={["left", "right", "top", "bottom"]}>
-        {/* 헤더 */}
-        <View style={styles.customHeader}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7}>
-            <Ionicons name="chevron-back" size={26} color="#0f3c45" />
-          </TouchableOpacity>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#fff" }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>상품 등록</Text>
 
-          <Text style={styles.headerTitle}>상품 상세</Text>
+        {/* 이미지 선택 미리보기 */}
+        <TouchableOpacity style={styles.imagePicker} onPress={pickImage} activeOpacity={0.85}>
+          {image?.uri ? (
+            <Image source={{ uri: image.uri }} style={styles.preview} />
+          ) : (
+            <Text style={{ color: "#4d7983" }}>이미지 선택하기</Text>
+          )}
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => router.push('/market/wishlist')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="heart" size={22} color="#ff4d6d" />
-          </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="상품명 (name)*"
+          value={name}
+          onChangeText={setName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="가격 (price)*"
+          value={price}
+          keyboardType="numeric"
+          onChangeText={setPrice}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="마켓 ID (market_id)*"
+          value={marketId}
+          keyboardType="numeric"
+          onChangeText={setMarketId}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="요약 (summary)"
+          value={summary}
+          onChangeText={setSummary}
+        />
+        <TextInput
+          style={[styles.input, { height: 96 }]}
+          placeholder="설명 (description)"
+          value={description}
+          onChangeText={setDescription}
+          multiline
+        />
+        <View style={styles.twoCols}>
+          <TextInput
+            style={[styles.input, styles.col]}
+            placeholder="재고 (stock)"
+            value={stock}
+            keyboardType="numeric"
+            onChangeText={setStock}
+          />
+          <TextInput
+            style={[styles.input, styles.col]}
+            placeholder="단위 (unit) (예: 개, 박스)"
+            value={unit}
+            onChangeText={setUnit}
+          />
+        </View>
+        <View style={styles.twoCols}>
+          <TextInput
+            style={[styles.input, styles.col]}
+            placeholder="카테고리 ID (category_id)"
+            value={categoryId}
+            keyboardType="numeric"
+            onChangeText={setCategoryId}
+          />
+          <TextInput
+            style={[styles.input, styles.col]}
+            placeholder="지역 ID (region_id)"
+            value={regionId}
+            keyboardType="numeric"
+            onChangeText={setRegionId}
+          />
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
-          {/* 이미지 */}
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            style={{ height: 230, backgroundColor: "#f1f7fa" }}
-          >
-            {(item?.images?.length ? item.images : [null]).map((uri, idx) =>
-              uri ? (
-                <Image key={idx} source={{ uri }} style={styles.heroImage} />
-              ) : (
-                <View key={idx} style={[styles.heroImage, { backgroundColor: "#e6eef2" }]} />
-              )
-            )}
-          </ScrollView>
-
-          {/* ✅ 상품명 + 별/하트(빨간 영역으로 이동) */}
-          <View style={[styles.card, { marginTop: 10 }]}>
-            <Text style={styles.productName}>{item.productName}</Text>
-            <View style={{ flexDirection: "row", marginTop: 8 }}>
-              <View style={styles.metaRow}>
-                <Ionicons name="star" size={16} color="#1f7a8c" />
-                <Text style={styles.metaText}>{Number(item.rating ?? 0).toFixed(1)}</Text>
-              </View>
-              <View style={[styles.metaRow, { marginLeft: 12 }]}>
-                <Ionicons name="heart" size={16} color="#1f7a8c" />
-                <Text style={styles.metaText}>{likesShown}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* 매장명 + 주소 + 문의/찜 버튼 */}
-          <View style={[styles.shopBlock, { marginTop: 10 }]}>
-            <Text style={styles.shopTitle}>{item.title}</Text>
-            {!!item.location && <Text style={styles.location}>📍 {item.location}</Text>}
-            <View style={styles.actionRow}>
-              {/* ⬇️ onPress 추가: 상품별 QnA 화면으로 이동 (Expo Router) */}
-              <TouchableOpacity
-                activeOpacity={0.9}
-                style={styles.chatBtn}
-                onPress={() =>
-                  router.push({
-                    pathname: "/market/product/[id]/qna",
-                    params: { id: String(id) },
-                  })
-                }
-              >
-                <Text style={styles.chatText}>문의하기</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => toggleFavorite({
-                  id: item.id,
-                  title: item.productName ?? item.title,
-                  image: item.images?.[0],
-                  location: item.location,
-                  price: Number(item.price ?? 0),
-                  rating: Number(item.rating ?? 0),
-                  likes: Number(item.likes ?? 0),
-                  region: item.region ?? '',
-                })}
-                style={styles.favToggleBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name={liked ? "heart" : "heart-outline"}
-                  size={22}
-                  color={liked ? "#ff4d6d" : "#0f3c45"}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* 설명 및 기타 */}
-          {!!item.summary && (
-            <View style={[styles.card, { marginTop: 10 }]}>
-              <Text style={styles.sectionTitle}>🧾 상품 설명</Text>
-              <Text style={styles.paragraph}>{item.summary}</Text>
-            </View>
-          )}
-          {!!item.sellerNote && (
-            <View style={[styles.card, { marginTop: 10 }]}>
-              <Text style={styles.sectionTitle}>💬 가게 사장님 한마디</Text>
-              <Text style={[styles.paragraph, { fontStyle: "italic" }]}>“{item.sellerNote}”</Text>
-            </View>
-          )}
-          <View style={[styles.card, { marginTop: 10 }]}>
-            <Text style={styles.sectionTitle}>🪙 판매가</Text>
-            <Text style={[styles.paragraph, { fontWeight: "700" }]}>
-              ₩{Number(item.price ?? 0).toLocaleString()} <Text style={{ fontWeight: "400" }}>(배송비 무료)</Text>
-            </Text>
-          </View>
-          {!!item.delivery?.length && (
-            <View style={[styles.card, { marginTop: 10 }]}>
-              <Text style={styles.sectionTitle}>🚚 배송 정보</Text>
-              {item.delivery.map((d, i) => (
-                <Text key={i} style={styles.paragraph}>• {d}</Text>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+        <TouchableOpacity
+          style={[styles.submitBtn, submitting && { opacity: 0.6 }]}
+          onPress={submit}
+          disabled={submitting}
+          activeOpacity={0.9}
+        >
+          <Text style={styles.submitText}>{submitting ? "등록 중..." : "상품 등록"}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#fff" },
-  safe: { flex: 1 },
-
-  customHeader: {
-    flexDirection: "row",
+  container: { padding: 16 },
+  title: { fontSize: 20, fontWeight: "900", color: "#0f3c45", marginBottom: 10 },
+  imagePicker: {
+    height: 180,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#d6e6ea",
+    backgroundColor: "#f3fafc",
     alignItems: "center",
-    justifyContent: "space-between",
-    height: 56,
+    justifyContent: "center",
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  preview: { width: "100%", height: "100%", resizeMode: "cover" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#d6e6ea",
+    backgroundColor: "#f8fdff",
+    borderRadius: 10,
     paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e3e9ec",
-    backgroundColor: "#fff",
+    paddingVertical: 10,
+    fontSize: 14,
+    marginBottom: 10,
   },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: "800", color: "#0f3c45" },
-
-  heroImage: { width: 360, height: 230, resizeMode: "cover" },
-
-  // 매장 블록 (파란 영역)
-  shopBlock: {
-    paddingHorizontal: 16,
+  twoCols: { flexDirection: "row", gap: 10 },
+  col: { flex: 1 },
+  submitBtn: {
+    marginTop: 8,
+    backgroundColor: "#0f6b7a",
     paddingVertical: 12,
-    backgroundColor: "#fff",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e6eef2",
-  },
-  shopTitle: { fontSize: 24, fontWeight: "900", color: "#0f3c45" },
-  location: { marginTop: 4, color: "#3f5c66" },
-  actionRow: {
-    flexDirection: "row",
+    borderRadius: 12,
     alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 10,
   },
-  chatBtn: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#e8f5f8",
-  },
-  chatText: { color: "#0f6b7a", fontWeight: "800" },
-  favToggleBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#f2f6f8",
-  },
-
-  // 상품 정보 블록 (빨간 영역)
-  card: {
-    marginHorizontal: 14,
-    backgroundColor: "#e9f9ff",
-    borderRadius: 16,
-    padding: 14,
-  },
-  productName: { fontSize: 20, fontWeight: "900", color: "#0f3c45" },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  metaText: { color: "#0f3c45", fontWeight: "800" },
-
-  sectionTitle: { fontSize: 16, fontWeight: "900", color: "#0f3c45" },
-  paragraph: { marginTop: 6, lineHeight: 21, color: "#455e68" },
+  submitText: { color: "#fff", fontWeight: "900", fontSize: 16 },
 });
