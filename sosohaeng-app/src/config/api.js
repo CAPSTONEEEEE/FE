@@ -13,7 +13,7 @@ if (!base) {
 
   if (hostUri) {
     const host = hostUri.split(':')[0]; // 192.168.0.67
-    base = `http://10.240.10.28:8000`;
+    base = `http://{host}:8000`;
   }
 }
 

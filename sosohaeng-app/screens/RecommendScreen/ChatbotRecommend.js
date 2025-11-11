@@ -3,46 +3,15 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, Touc
 import { Ionicons } from '@expo/vector-icons';
 import TopBackBar from '../../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// API 호출 오류를 피하기 위해 주석 처리하거나, 이전 단계의 가짜 응답을 사용합니다.
-// import { sendChatbotMessage } from '../../src/config/api_Recommend'; 
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { sendChatbotMessage } from '../../src/config/api_Recommend'; 
 
-// 참고: require('../../assets/icons/chatbot.png') 경로는 프로젝트 구조에 따라 다를 수 있습니다.
 const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
 
-// 💡 챗봇 대본 정의 (정해진 답변 사용)
-const CHATBOT_RESPONSES = {
-    "자연이 좋아": 
-`"자연" 키워드를 입력받았습니다. RAG 구조를 통해 다음과 같은 추가 키워드로 확장했습니다.
-키워드: [자연, 휴양, 힐링, 숲]
-
-위의 키워드를 기반으로 당신에게 꼭 맞는 여행지 2곳을 추천해드립니다.
-
-**1. 제주도 서귀포 사려니 숲길**
-설명: 오름 사이를 잇는 숲길로 걷는 것만으로도 힐링이 됩니다. 빽빽한 삼나무와 맑은 공기가 특징입니다.
-주소: 제주 서귀포시 비자림로 1421
-
-**2. 장성 축령산 편백숲**
-설명: 국내 최대 규모의 편백숲으로 피톤치드가 가득한 산림치유의 공간입니다.
-주소: 전남 장성군 장성읍 임종국로 167`,
-    "자연": 
-`"자연" 키워드를 입력받았습니다. RAG 구조를 통해 다음과 같은 추가 키워드로 확장했습니다.
-키워드: [자연, 휴양, 힐링, 숲]
-
-위의 키워드를 기반으로 당신에게 꼭 맞는 여행지 2곳을 추천해드립니다.
-
-**1. 제주도 서귀포 사려니 숲길**
-설명: 오름 사이를 잇는 숲길로 걷는 것만으로도 힐링이 됩니다. 빽빽한 삼나무와 맑은 공기가 특징입니다.
-주소: 제주 서귀포시 비자림로 1421
-
-**2. 장성 축령산 편백숲**
-설명: 국내 최대 규모의 편백숲으로 피톤치드가 가득한 산림치유의 공간입니다.
-주소: 전남 장성군 장성읍 임종국로 167`,
-    "디폴트": "죄송합니다. 아직 학습되지 않은 질문이거나 네트워크 문제로 답변을 드릴 수 없습니다. '자연이 좋아'라고 다시 입력해 보시겠어요?"
-};
-
-
-export default function ChatbotRecommend({ navigation }) {
-    // 💡 초기 메시지 수정: 질문 내용에 맞게 수정
+export default function ChatbotRecommend() {
+  const navigation = useNavigation();
   const [messages, setMessages] = useState([
     { 
       id: 0, 
@@ -55,6 +24,31 @@ export default function ChatbotRecommend({ navigation }) {
   const inputRef = useRef(null); 
   const scrollViewRef = useRef(null);
   const [loading, setLoading] = useState(false);
+
+  // 하단 탭바 + 홈바(안전영역) 높이만큼 띄우기 위한 계산
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+  const INPUT_BAR_HEIGHT = 30;                 // 입력창(버튼/패딩 포함) 대략 높이
+  const bottomGap = tabBarHeight + insets.bottom - 40;
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation?.getParent?.();
+      if (!parent) return undefined;
+
+      // 탭바 숨기기
+      parent.setOptions({
+        tabBarStyle: { display: 'none' },
+      });
+
+      // 화면을 떠날 때 원상 복구
+      return () => {
+        parent.setOptions({
+          tabBarStyle: undefined,
+        });
+      };
+    }, [navigation])
+  );
 
   // 1. 컴포넌트 마운트 시 TextInput에 자동 포커스 
   useEffect(() => {
@@ -79,7 +73,6 @@ export default function ChatbotRecommend({ navigation }) {
     if (input.trim() === '' || loading) return;
 
     const userMessage = input.trim();
-    const userMessageLower = userMessage.toLowerCase();
     
     // 1. 사용자 메시지 추가
     const newMessage = { id: messages.length, text: userMessage, user: 'user' };
@@ -89,20 +82,23 @@ export default function ChatbotRecommend({ navigation }) {
     // 2. 로딩 상태 시작 
     setLoading(true);
 
-    // 3. 정해진 답변 가져오기 (키워드 매칭)
-    let botResponseText;
-    if (userMessageLower.includes('자연이 좋아') || userMessageLower.includes('자연')) {
-        botResponseText = CHATBOT_RESPONSES["자연이 좋아"];
-    } else if (userMessageLower.includes('바다')) {
-        botResponseText = CHATBOT_RESPONSES["바다"];
-    } else {
-        botResponseText = CHATBOT_RESPONSES["디폴트"];
-    }
+    let botResponseText = "죄송합니다. 챗봇이 답변을 생성하는 데 실패했습니다. 서버 상태를 확인해주세요. 😟";
+    
+    try {
+        // 3. API 호출
+        const apiResponse = await sendChatbotMessage(userMessage);
+        
+        // 4. 챗봇 응답 텍스트 추출
+        if (apiResponse && apiResponse.response) {
+            botResponseText = apiResponse.response;
+        }
 
-    // 4. 5초 딜레이 후 챗봇 응답 추가
-    setTimeout(() => {
+    } catch (error) {
+        console.error("챗봇 API 호출 실패:", error);
+    } finally {
+        // 5. 챗봇 응답 추가
         const chatbotResponse = {
-            id: messages.length + 1, // 메시지 목록이 업데이트된 후의 인덱스
+            id: messages.length + 1,
             text: botResponseText,
             user: 'chatbot',
             image: CHATBOT_ICON
@@ -111,31 +107,34 @@ export default function ChatbotRecommend({ navigation }) {
         setMessages(prevMessages => [...prevMessages, chatbotResponse]);
         setLoading(false);
         
-        // 5. 키보드 닫히지 않도록 포커스 유지
+        // 6. 키보드 닫히지 않도록 포커스 유지
         if (inputRef.current) {
             inputRef.current.focus(); 
         }
-    }, 5000); // 💡 5초 (5000ms) 딜레이 적용
-    
+    }
   };
 
   return (
     <SafeAreaView style={styles.page}>
       <TopBackBar
-        title="나에게 딱! 맞는 여행"
+        title={<Text style={styles.titleText}>나에게 딱! 맞는 여행"</Text>}
         right={
           <TouchableOpacity
-            onPress={() => navigation.navigate('찜')}
+            // 라우팅 오류 해결을 위해 Main 스택을 통해 '찜'으로 이동하도록 수정
+            onPress={() => navigation.navigate('Main', { screen: '찜' })} 
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
           </TouchableOpacity>
         }
       />
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef} 
         style={styles.messageList} 
-        contentContainerStyle={styles.messageListContent}
+        contentContainerStyle={[
+          styles.messageListContent,
+          { paddingBottom: bottomGap + INPUT_BAR_HEIGHT }
+        ]}
         onContentSizeChange={() => {
             if (scrollViewRef.current) {
                 scrollViewRef.current.scrollToEnd({ animated: true });
@@ -172,8 +171,9 @@ export default function ChatbotRecommend({ navigation }) {
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer, { marginBottom: bottomGap }]}>
           <TouchableOpacity style={styles.inputIcon} disabled={loading}>
             <Ionicons name="add" size={24} color="#666" />
           </TouchableOpacity>
@@ -201,9 +201,10 @@ export default function ChatbotRecommend({ navigation }) {
 }
 
 // ------------------------------------
-// 스타일 코드 (변화 없음)
+// 스타일 코드
 // ------------------------------------
 const styles = StyleSheet.create({
+  titleText: { fontSize: 17, fontWeight: '700', color: '#111' },
   page: { 
     flex: 1, 
     backgroundColor: '#fff',
@@ -292,4 +293,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-
