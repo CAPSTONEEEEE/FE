@@ -6,45 +6,57 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
-import { useRouter } from 'expo-router'; //  1. Expo Router의 useRouter를 import
-import apiClient from '../src/config/client';  // 2. apiClient를 import
+import { useRouter } from 'expo-router'; 
+import apiClient from '../src/config/client';  
 
 export default function RegisterScreen() {
-  const router = useRouter(); // 3. router 객체 생성
+  const router = useRouter(); 
   
   const [email, setEmail] = useState("");
-  const [name, setName] = useState(""); // UI에서는 'name'을 계속 사용
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !name || !password) {
+    if (!email || !password|| !username) {
       Alert.alert("입력 오류", "모든 항목을 입력해주세요.");
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      // 4. apiClient를 사용하여 회원가입 API 호출
-      const response = await apiClient.post("/users/register", { 
+      const response = await apiClient.post("/auth/register", { 
+        username, 
         email, 
-        username: name, // 5. 백엔드가 기대하는 'username'으로 이름을 바꿔서 전송
         password 
       });
 
       Alert.alert("회원가입 성공", "이제 로그인할 수 있습니다.", [
-        // 6. router.push를 사용하여 로그인 화면으로 이동
         { text: "확인", onPress: () => router.push("/login") },
       ]);
       
     } catch (err) {
       const errorMessage = err.response?.data?.detail || "서버와 연결할 수 없습니다.";
       Alert.alert("회원가입 실패", errorMessage);
+      console.error("Register Error:", err);
+    } finally {
+        setIsLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>소소행 회원가입</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="이름"
+        value={username}
+        onChangeText={setUsername}
+        maxLength={30}
+      />
       <TextInput
         style={styles.input}
         placeholder="이메일"
@@ -55,13 +67,7 @@ export default function RegisterScreen() {
       />
       <TextInput
         style={styles.input}
-        placeholder="이름"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="비밀번호"
+        placeholder="비밀번호 (8자 이상)"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -71,11 +77,15 @@ export default function RegisterScreen() {
       <TouchableOpacity
         style={[styles.button, { backgroundColor: "#28a745" }]}
         onPress={handleRegister}
+        disabled={isLoading}
       >
-        <Text style={styles.buttonText}>회원가입</Text>
+        {isLoading ? (
+            <ActivityIndicator color="#fff" />
+        ) : (
+            <Text style={styles.buttonText}>회원가입</Text>
+        )}
       </TouchableOpacity>
 
-      {/* 👈 7. router.push를 사용하여 로그인 화면으로 이동 */}
       <TouchableOpacity onPress={() => router.push("/login")}>
         <Text style={styles.link}>로그인으로 돌아가기</Text>
       </TouchableOpacity>
