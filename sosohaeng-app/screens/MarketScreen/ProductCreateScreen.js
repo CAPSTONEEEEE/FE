@@ -1,4 +1,4 @@
-// /screens/MarketScreen/ProductCreateScreen.js
+// screens/MarketScreen/ProductCreateScreen.js
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
@@ -33,7 +33,7 @@ export default function ProductCreateScreen() {
       try {
         setChecking(true);
         const r = await fetch(`${API_BASE_URL}/me`, {
-          headers: { Authorization: 'Bearer <JWT>' }, // (어차피 더미 함수가 처리)
+          headers: { Authorization: 'Bearer <JWT>' }, // TODO: 실제 JWT 토큰으로 교체
         });
         if (!r.ok) throw new Error('권한 확인 실패');
         const j = await r.json();
@@ -48,6 +48,12 @@ export default function ProductCreateScreen() {
   }, []);
 
   const pickImage = async () => {
+    // 권한 요청
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '앨범 접근 권한이 필요합니다.');
+      return;
+    }
     const r = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.85,
@@ -61,7 +67,13 @@ export default function ProductCreateScreen() {
     }
     const form = new FormData();
     images.forEach((img, idx) => {
-      form.append('images', { uri: img.uri, name: `photo_${idx}.jpg`, type: 'image/jpeg' });
+      const uriParts = img.uri.split('.');
+      const fileType = uriParts[uriParts.length - 1];
+      form.append('images', { 
+        uri: img.uri, 
+        name: `photo_${idx}.${fileType}`, 
+        type: `image/${fileType}` 
+      });
     });
     form.append('title', title);
     form.append('shop_name', shopName);
@@ -73,7 +85,7 @@ export default function ProductCreateScreen() {
 
     const r = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer <JWT>' },
+      headers: { Authorization: 'Bearer <JWT>' }, // TODO: 실제 JWT 토큰으로 교체
       body: form,
     });
     if (r.ok) {
@@ -106,7 +118,7 @@ export default function ProductCreateScreen() {
           상품 등록은 회원가입 시 사업자등록번호를 인증한 판매자만 이용할 수 있어요.
         </Text>
         <Text style={[styles.lockText, { marginTop: 4 }]}>
-          내 상태: {me?.businessNumber ? '심사 중/미승인' : '사업자 미등록'}
+          내 상태: {me?.businessNumber ? (me.seller_status === 'approved' ? '승인됨' : '심사 중/미승인') : '사업자 미등록'}
         </Text>
         <View style={{ height: 12 }} />
         <TouchableOpacity style={styles.toHomeBtn} onPress={() => router.back()} activeOpacity={0.9}>
