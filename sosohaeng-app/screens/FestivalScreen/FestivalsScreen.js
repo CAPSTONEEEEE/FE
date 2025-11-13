@@ -19,8 +19,8 @@ const fetchFestivals = async (queryContext) => {
     params.user_lon = location.longitude;
     
     if (showNearby) {
-      // BE가 30km 이내로 필터링하도록 요청합니다.
-      params.distance_km = 30;
+      // BE가 10km 이내로 필터링하도록 요청합니다.
+      params.distance_km = 10;
       params.order_by = 'distance'; // 거리순 정렬 강제
     }
   }
@@ -39,7 +39,7 @@ export default function FestivalScreen() {
   const router = useRouter();
   const [location, setLocation] = useState(null);
   const [viewMode, setViewMode] = useState('map');
-  const DISTANCE_LIMIT_KM = 30;
+  const DISTANCE_LIMIT_KM = 10;
   const [showOnlyNearby, setShowOnlyNearby] = useState(false);
   const [orderBy, setOrderBy] = useState('distance');
 
@@ -157,7 +157,22 @@ export default function FestivalScreen() {
                 longitude: parseFloat(festival.mapx),
               }}
               title={festival.title}
-              onPress={() => router.push(`/festivals/${festival.id}`)}
+              onPress={() => {
+                // 목록과 동일하게 상세 페이지에 필요한 데이터 (거리 포함)를 JSON 문자열로 만들어 전달
+                const formattedDistance = festival.distance !== undefined && festival.distance !== null 
+                    ? formatDistance(festival.distance) 
+                    : undefined;
+                
+                const detailData = JSON.stringify({
+                    festival: festival,
+                    distance: formattedDistance 
+                });
+
+                router.push({
+                    pathname: `/festivals/${festival.id}`, 
+                    params: { data: detailData } 
+                });
+              }}
             />
           ))}
         </MapView>
