@@ -1,66 +1,107 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, ActivityIndicator } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import apiClient from '../../src/config/client'; 
-import { useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
+import useFavoritesStore from '../../screens/stores/favoritesStore'; 
+
+const { width } = Dimensions.get('window');
+const IMAGE_HEIGHT = width * 0.6;
+const PLACEHOLDER_URL = 'https://placehold.co/600x360/eee/ccc?text=No+Image';
+
+// 헬퍼 함수: 거리 포맷팅 (이전의 formatDistance 유틸리티 대체)
+const formatDistance = (distance) => {
+  if (distance === null || distance === undefined || isNaN(distance)) return '거리 정보 없음';
+  
+  const dist = parseFloat(distance);
+  if (dist < 1) {
+    return `${(dist * 1000).toFixed(0)}m`;
+  }
+  return `${dist.toFixed(1)}km`;
+};
+// 날짜 포맷팅 헬퍼 함수
 const formatDate = (dateStr) => {
   if (!dateStr || dateStr.length !== 8) return dateStr;
-  return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+  return `${dateStr.substring(0, 4)}년 ${dateStr.substring(4, 6)}월 ${dateStr.substring(6, 8)}일`;
 };
-const fetchFestivalById = async (id) => {
-  if (!id) return null;
-  const { data } = await apiClient.get(`/festivals/${id}`);
-  return data;
-};
-export default function FestivalDetailScreen() {
-  const { id } = useLocalSearchParams(); 
 
-  const { data: festival, isLoading, isError, error } = useQuery({
-    queryKey: ['festival', id],
-    queryFn: () => fetchFestivalById(id),
-    enabled: !!id, // id가 있을 때만 쿼리 실행
-  });
+/**
+ * 목록 화면에서 전달받은 prop을 사용하여 상세 정보를 표시합니다.
+ * @param {object} props
+ * @param {object} props.festival - 목록 화면에서 전달받은 축제 상세 객체
+ * @param {string} props.distance - 목록 화면에서 포맷팅되어 전달된 거리 문자열
+ */
+export default function FestivalDetailScreen({ festival, distance }) {
+  // Zustand 찜 스토어 연동
+  const isFavorite = useFavoritesStore((state) => state.isFavorite(festival?.id));
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
-  if (isLoading) {
+  if (!festival) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <Text style={styles.errorText}>축제 상세 정보를 찾을 수 없습니다.</Text>
       </View>
     );
   }
-
-  if (isError || !festival) {
-    console.error("API Error:", error);
-    return (
-      <View style={styles.center}>
-        <Text>축제 정보를 불러오는 데 실패했습니다.</Text>
-      </View>
+  const festivalDistance = festival.distance;
+  const formattedDistance = formatDistance(festivalDistance);
+  // 찜 버튼 핸들러
+  const handleFavoritePress = () => {
+    toggleFavorite(festival); // 축제 객체 전체를 스토어에 넘겨 찜/찜 해제 요청
+    Alert.alert(
+        "찜 알림",
+        isFavorite ? `${festival.title} 찜 목록에서 제거되었습니다.` : `${festival.title} 찜 목록에 추가되었습니다.`
     );
-  }
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* BE가 'image_url'을 줍니다. */}
+      
+      {/* 1. 이미지 표시 */}
       <Image 
-        source={{ uri: festival.image_url || 'https://placehold.co/400x240/eee/ccc?text=No+Image' }} 
+        source={{ uri: festival.image_url || PLACEHOLDER_URL }} 
         style={styles.poster} 
+        defaultSource={{ uri: PLACEHOLDER_URL }}
       />
-      <View style={styles.content}>
-        {/* BE가 'title'을 줍니다. */}
-        <Text style={styles.name}>{festival.title}</Text>
-        {/* BE가 'location'을 줍니다. */}
-        <Text style={styles.meta}>📍 {festival.location || '위치 정보 없음'}</Text>
-        
-        {/* 5. 날짜 포맷팅 함수 적용 */}
-        <Text style={styles.meta}>
-          🗓 {`${formatDate(festival.event_start_date)} ~ ${formatDate(festival.event_end_date)}`}
+
+      {/* 2. 찜 버튼 (이미지 위 콘텐츠 영역에 위치) */}
+      <TouchableOpacity 
+        onPress={handleFavoritePress} 
+        style={[styles.favoriteButton, isFavorite && styles.favoriteActive]}
+      >
+        <Ionicons 
+            name={isFavorite ? 'heart' : 'heart-outline'} 
+            size={24} 
+            color={isFavorite ? '#fff' : '#000'} 
+        />
+        <Text style={[styles.favoriteText, isFavorite && styles.favoriteTextActive]}>
+          {isFavorite ? '찜 완료' : '찜하기'}
         </Text>
+      </TouchableOpacity>
+
+      <View style={styles.content}>
+        {/* 3. 제목 표시 */}
+        <Text style={styles.name}>{festival.title}</Text>
         
-        <Text style={styles.sectionTitle}>소개</Text>
+        {/* 4. 현재 위치로부터 거리 표시 */}
+        {formattedDistance && (formattedDistance !== '거리 정보 없음') && (
+            <Text style={styles.distanceText}>
+                🚀 내 위치에서: {formattedDistance}
+            </Text>
+        )}
         
-        {/* 6. 'description'이 아닌 'overview'를 사용합니다. */}
-        <Text style={styles.description}>{festival.overview || '상세 정보가 없습니다.'}</Text>
+        {/* 기간 및 위치 정보 */}
+        <View style={styles.infoRow}>
+            <Text style={styles.metaLabel}>🗓 기간</Text>
+            <Text style={styles.metaValue}>
+              {`${formatDate(festival.event_start_date)} ~ ${formatDate(festival.event_end_date)}`}
+            </Text>
+        </View>
+        
+        <View style={styles.infoRow}>
+            <Text style={styles.metaLabel}>📍 위치</Text>
+            <Text style={styles.metaValue}>{festival.location || '위치 정보 없음'}</Text>
+        </View>
+        
       </View>
     </ScrollView>
   );
@@ -69,29 +110,62 @@ export default function FestivalDetailScreen() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#fff' 
+    backgroundColor: '#f9f9f9' 
   },
   contentContainer: { 
     paddingBottom: 32 
   },
+  center: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+  },
   poster: { 
-    width: '100%', 
-    height: 240, 
+    width: width, 
+    height: IMAGE_HEIGHT, 
     backgroundColor: '#eee' 
   },
   content: { 
-    padding: 16 
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    marginTop: -10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
   name: { 
-    fontSize: 24, 
-    fontWeight: '700', 
-    marginBottom: 8 
+    fontSize: 26, 
+    fontWeight: '800', 
+    marginBottom: 10,
+    color: '#333',
   },
-  meta: { 
+  distanceText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginBottom: 15,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  metaLabel: { 
     fontSize: 15, 
+    fontWeight: 'bold',
     color: '#555', 
-    marginBottom: 6,
-    lineHeight: 22,
+    width: 60,
+  },
+  metaValue: {
+    fontSize: 15,
+    color: '#333',
+    flex: 1,
   },
   sectionTitle: { 
     marginTop: 20, 
@@ -100,16 +174,34 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
     paddingTop: 20,
+    marginBottom: 10,
+    color: '#333',
   },
-  description: { 
-    marginTop: 8, 
-    fontSize: 16, 
-    lineHeight: 24, 
-    color: '#333' 
+  favoriteButton: {
+    position: 'absolute',
+    top: IMAGE_HEIGHT - 25, 
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 5,
+    zIndex: 10,
   },
-  center: { 
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  favoriteActive: {
+    backgroundColor: '#FF6347', 
   },
+  favoriteText: {
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 5,
+  },
+  favoriteTextActive: {
+    color: '#fff',
+  }
 });
