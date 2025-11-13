@@ -6,13 +6,30 @@ import { useQuery } from '@tanstack/react-query';
 
 import apiClient from '../../src/config/client'; 
 import { useRouter } from 'expo-router';
+import { formatDistance } from '../../src/utils/distanceHelper';
 
-const fetchFestivals = async () => {
-  // 1. BE가 page/size를 받지 않으므로, 파라미터 없이 호출합니다.
-  const { data } = await apiClient.get('/festivals/');
+const fetchFestivals = async (queryContext) => {
+  const { location, showNearby, orderBy } = queryContext.queryKey[1];
+  const finalOrderBy = (orderBy === 'start' || orderBy === 'start_date') ? 'distance' : orderBy;
+  
+  let params = { page: 1, size: 50, order_by: finalOrderBy };
+  
+  if (location) {
+    params.user_lat = location.latitude;
+    params.user_lon = location.longitude;
+    
+    if (showNearby) {
+      // BE가 30km 이내로 필터링하도록 요청합니다.
+      params.distance_km = 30;
+      params.order_by = 'distance'; // 거리순 정렬 강제
+    }
+  }
+
+  // 파라미터를 포함하여 API를 호출합니다.
+  const { data } = await apiClient.get('/festivals/', { params });
   
   if (!Array.isArray(data)) {
-    return []; 
+    return data.items || [];
   }
   return data;
 };
@@ -22,11 +39,23 @@ export default function FestivalScreen() {
   const router = useRouter();
   const [location, setLocation] = useState(null);
   const [viewMode, setViewMode] = useState('map');
+  const DISTANCE_LIMIT_KM = 30;
+  const [showOnlyNearby, setShowOnlyNearby] = useState(false);
+  const [orderBy, setOrderBy] = useState('distance');
 
   const { data: festivals, isLoading, isError } = useQuery({
-    queryKey: ['festivals'],
-    queryFn: fetchFestivals,
-  });
+  queryKey: [
+    'festivals', 
+    { 
+      location: location, 
+      showNearby: showOnlyNearby, 
+      orderBy: orderBy 
+    }
+  ], 
+  queryFn: fetchFestivals,
+  // location이 null이거나, 아직 정렬 기준이 결정되지 않았다면 쿼리를 실행하지 않음
+  enabled: !!location && !!orderBy, 
+});
 
   useEffect(() => {
     (async () => {
@@ -40,30 +69,62 @@ export default function FestivalScreen() {
     })();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      // BE가 보낸 'id' (숫자)를 사용합니다.
-      onPress={() => router.push(`/festivals/${item.id}`)}
-    >
-      {/* BE가 보낸 'image_url'을 사용합니다. */}
-      <Image 
-        source={{ uri: item.image_url || 'https://placehold.co/80x80/eee/ccc?text=No+Image' }} 
-        style={styles.thumbnail} 
-      />
-      <View style={styles.cardContent}>
-        {/* BE가 보낸 'title'을 사용합니다. */}
-        <Text style={styles.name}>{item.title}</Text>
-        {/* BE가 보낸 'location'을 사용합니다. */}
-        <Text style={styles.address} numberOfLines={1}>📍 {item.location || '위치 정보 없음'}</Text>
-        {/* BE가 보낸 'event_start_date' ("YYYY-MM-DD")를 사용합니다. */}
-        <Text style={styles.date}>🗓 {`${item.event_start_date} ~ ${item.event_end_date}`}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }) => {
+    
+    // 1. BE에서 받은 거리 정보를 포맷합니다.
+    const formattedDistance = item.distance !== undefined && item.distance !== null 
+        ? formatDistance(item.distance) 
+        : undefined;
+
+    // 2. 상세 페이지로 보낼 데이터 (축제 객체 + 포맷된 거리)를 만듭니다.
+    const detailData = JSON.stringify({
+        festival: item,
+        distance: formattedDistance // 포맷된 거리 문자열을 전달
+    });
+
+    return (
+        <TouchableOpacity
+            style={styles.card}
+            // onPress 시, URL 경로와 함께 데이터 객체를 파라미터로 전달합니다.
+            onPress={() => {
+                router.push({
+                    pathname: `/festivals/${item.id}`, // URL 경로는 id를 사용하지만
+                    params: { data: detailData }     // 실제 정보는 params.data에 담아 보냅니다.
+                });
+            }}
+        >
+            {/* BE가 보낸 'image_url'을 사용합니다. */}
+            {item.image_url && item.image_url.length > 0 ? (
+                <Image source={{ uri: item.image_url }} style={styles.thumbnail} />
+            ) : (
+                // image_url이 없거나 빈 문자열일 때 placeholder 렌더링
+                <View style={[styles.placeholder, styles.thumbnail]} /> 
+            )}
+            <View style={styles.cardContent}>
+                {/* BE가 보낸 'title'을 사용합니다. */}
+                <Text style={styles.name}>{item.title}</Text>
+                {/* BE가 보낸 'location'을 사용합니다. */}
+                <Text style={styles.address} numberOfLines={1}>📍 {item.location || '위치 정보 없음'}</Text>
+                {/* BE가 보낸 'event_start_date' ("YYYY-MM-DD")를 사용합니다. */}
+                <Text style={styles.date}>🗓 {`${item.event_start_date} ~ ${item.event_end_date}`}</Text>
+                
+                {/* 포맷된 거리 표시 (item.distance 대신 formattedDistance 사용 가능하지만, item.distance를 formatDistance로 처리하는 기존 방식 유지) */}
+                {item.distance !== undefined && item.distance !== null && (
+                    <Text style={styles.distance}>
+                        {formatDistance(item.distance)}
+                    </Text>
+                )}
+            </View>
+        </TouchableOpacity>
+    );
+};
 
   const renderContent = () => {
-    const validFestivals = festivals?.filter(f => f.mapx && f.mapy);
+    const validFestivals = festivals?.filter(f => 
+        f.mapx && f.mapy && 
+        !isNaN(parseFloat(f.mapx)) && 
+        !isNaN(parseFloat(f.mapy))
+    );
     if (isLoading || !location) {
       return (
         <View style={styles.centered}>
@@ -88,12 +149,12 @@ export default function FestivalScreen() {
           }}
           showsUserLocation={true}
         >
-          {!isError && validFestivals?.map(festival => (
+          {!isError && validFestivals?.map((festival, index) => (
             <Marker
-              key={festival.id}
+              key={`${festival.title}-${index}`} 
               coordinate={{
-                latitude: parseFloat(festival.mapy), // BE가 'mapy'를 줍니다.
-                longitude: parseFloat(festival.mapx), // BE가 'mapx'를 줍니다.
+                latitude: parseFloat(festival.mapy),
+                longitude: parseFloat(festival.mapx),
               }}
               title={festival.title}
               onPress={() => router.push(`/festivals/${festival.id}`)}
@@ -106,7 +167,7 @@ export default function FestivalScreen() {
         <FlatList
           data={festivals}
           renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => item.title ? `${item.title}-${index}` : index.toString()}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={() => (
             <View style={styles.centered}>
@@ -136,6 +197,39 @@ export default function FestivalScreen() {
           <Text style={[styles.toggleText, viewMode === 'list' && styles.activeText]}>목록</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={styles.filterContainer}>
+        {/* 근처만 보기 (거리 필터) 버튼 */}
+        {location && (
+          <TouchableOpacity
+          style={[styles.filterButton, showOnlyNearby && styles.activeFilterButton]}
+          onPress={() => {
+            const newState = !showOnlyNearby;
+            setShowOnlyNearby(newState);
+            // 근처 필터 활성화 시 거리순 정렬로 자동 변경
+            if (newState) {
+              setOrderBy('distance');
+            } else {
+              setOrderBy('distance'); 
+            }
+          }}
+        >
+          <Text style={[styles.filterText, showOnlyNearby && styles.activeFilterText]}>
+            {showOnlyNearby ? `✅ ${DISTANCE_LIMIT_KM}km 이내` : `${DISTANCE_LIMIT_KM}km 이내`}
+            </Text>
+            </TouchableOpacity>
+          )}
+          {/* '제목 순' 정렬 버튼 */}
+          <TouchableOpacity
+              style={[styles.filterButton, orderBy === 'title' && !showOnlyNearby && styles.activeFilterButton]}
+              onPress={() => {
+                  setOrderBy('title');
+                  setShowOnlyNearby(false); // 제목순 선택 시 근처 필터 해제
+              }}
+          >
+              <Text style={[styles.filterText, orderBy === 'title' && !showOnlyNearby && styles.activeFilterText]}>제목순</Text>
+          </TouchableOpacity>
+        </View>
 
       <View style={styles.contentContainer}>
         {renderContent()}
@@ -252,4 +346,39 @@ const styles = StyleSheet.create({
         color: 'white',
         textAlign: 'center',
     },
+
+    distance: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF', // 거리 강조 색상
+    marginTop: 5,
+  },
+  
+  filterContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    justifyContent: 'flex-start',
+  },
+  filterButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginRight: 10,
+  },
+  activeFilterButton: {
+    backgroundColor: '#007AFF',
+  },
+  filterText: {
+    color: '#333',
+    fontSize: 14,
+  },
+  activeFilterText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
 });
