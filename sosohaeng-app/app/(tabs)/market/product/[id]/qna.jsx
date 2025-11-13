@@ -1,4 +1,4 @@
-// app/market/product/[id]/qna.jsx
+// app/(tabs)/market/product/[id]/qna.jsx
 import React from "react";
 import ProductQnAScreen from "../../../../../screens/MarketScreen/ProductQnAScreen";
 
