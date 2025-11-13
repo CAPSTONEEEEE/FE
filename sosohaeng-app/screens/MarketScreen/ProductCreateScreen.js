@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
 
-const SERVER_ROOT_URL = API_BASE_URL.replace('/api/v1', ''); // BE 루트
+//const SERVER_ROOT_URL = API_BASE_URL.replace('/api/v1', ''); // BE 루트
 
 export default function ProductCreateScreen() {
   const router = useRouter();
@@ -33,8 +33,13 @@ export default function ProductCreateScreen() {
     (async () => {
       try {
         setChecking(true);
+        /*
         const r = await fetch(`${SERVER_ROOT_URL}/me`, {
           headers: { Authorization: 'Bearer <JWT>' },
+        });
+        */
+        const r = await fetch(`${API_BASE_URL}/me`, {
+          headers: { Authorization: 'Bearer <JWT>' }, // (어차피 더미 함수가 처리)
         });
         if (!r.ok) throw new Error('권한 확인 실패');
         const j = await r.json();
@@ -72,9 +77,9 @@ export default function ProductCreateScreen() {
     form.append('price', Number(price));
     form.append('delivery_info', delivery);
 
-    const r = await fetch(`${SERVER_ROOT_URL}/products`, {
+    const r = await fetch(`${API_BASE_URL}/products`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer <JWT>' }, // BE에서 require_seller로 보호
+      headers: { Authorization: 'Bearer <JWT>' },
       body: form,
     });
     if (r.ok) {

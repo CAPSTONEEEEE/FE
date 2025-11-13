@@ -1,4 +1,4 @@
-// app/market/_layout.jsx
+// app/(tabs)/market/_layout.jsx
 import { Stack } from "expo-router";
 
 export default function MarketLayout() {
@@ -10,10 +10,9 @@ export default function MarketLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "마켓" }} />
-      <Stack.Screen name="cart" options={{ title: "장바구니" }} />
       <Stack.Screen name="wishlist" options={{ title: "위시리스트" }} />
-      <Stack.Screen name="seller" options={{ title: "판매자" }} />
       <Stack.Screen name="product/[id]" options={{ title: "상품 상세" }} />
+      <Stack.Screen name="product/new" options={{ title: "상품 등록하기" }} />
     </Stack>
   );
 }
