@@ -10,6 +10,31 @@ import { sendChatbotMessage } from '../../src/config/api_Recommend';
 
 const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
 
+const RecommendationCard = ({ recommendation, onDetailPress }) => {
+  return (
+    <View style={cardStyles.cardContainer}>
+      <Text style={cardStyles.summaryText}>{recommendation.summaryText}</Text>
+      
+      {recommendation.items.map((item, index) => (
+        <View key={index} style={cardStyles.itemRow}>
+          <Ionicons name="location-sharp" size={16} color="#6D99FF" style={{ marginRight: 8 }} />
+          <Text style={cardStyles.itemTitle}>{item.title}</Text>
+          <TouchableOpacity 
+            style={cardStyles.detailButton} 
+            onPress={() => onDetailPress(item.contentid)}
+          >
+            <Text style={cardStyles.detailButtonText}>상세 보기</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+      
+      {recommendation.footerText && (
+        <Text style={cardStyles.footerText}>{recommendation.footerText}</Text>
+      )}
+    </View>
+  );
+};
+
 export default function ChatbotRecommend() {
   const navigation = useNavigation();
   const [messages, setMessages] = useState([
