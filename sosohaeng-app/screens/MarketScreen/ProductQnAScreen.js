@@ -8,8 +8,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
 
-//const SERVER_ROOT_URL = API_BASE_URL.replace('/api/v1', ''); // BE 루트로 정규화
-
 export default function ProductQnAScreen() {
   const router = useRouter();
 
@@ -31,7 +29,6 @@ export default function ProductQnAScreen() {
     }
     try {
       setLoading(true);
-      //const r = await fetch(`${SERVER_ROOT_URL}/products/${pid}/qna`);
       const r = await fetch(`${API_BASE_URL}/products/${pid}/qna`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const j = await r.json();
