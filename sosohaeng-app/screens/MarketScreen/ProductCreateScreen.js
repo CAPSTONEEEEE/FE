@@ -8,7 +8,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
 
-//const SERVER_ROOT_URL = API_BASE_URL.replace('/api/v1', ''); // BE 루트
 
 export default function ProductCreateScreen() {
   const router = useRouter();
@@ -33,11 +32,6 @@ export default function ProductCreateScreen() {
     (async () => {
       try {
         setChecking(true);
-        /*
-        const r = await fetch(`${SERVER_ROOT_URL}/me`, {
-          headers: { Authorization: 'Bearer <JWT>' },
-        });
-        */
         const r = await fetch(`${API_BASE_URL}/me`, {
           headers: { Authorization: 'Bearer <JWT>' }, // (어차피 더미 함수가 처리)
         });
