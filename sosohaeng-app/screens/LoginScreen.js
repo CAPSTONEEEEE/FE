@@ -24,7 +24,14 @@ export default function LoginScreen() {
     try {
       const response = await apiClient.post("/auth/login", { email, password });
       const { access_token } = response.data;
-      await login(access_token);
+      await login(access_token, {
+        user_id: response.data.user_id,
+        username: response.data.username,
+        email: response.data.email,
+        is_business: response.data.is_business,
+        business_registration_number: response.data.business_registration_number,
+      });
+
       
       Alert.alert("로그인 성공", `${response.data.username}님 환영합니다!`);
       router.replace("/(tabs)/home"); 
