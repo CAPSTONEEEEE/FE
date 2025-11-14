@@ -12,12 +12,17 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
-import useFavoritesStore from '../stores/favoritesStore'; // ✅ 즐겨찾기 스토어
+
+// favoritesStore는 screens/stores/ 에서
+import useFavoritesStore from '../stores/favoritesStore';
+// authStore는 src/stores/ 에서
+import useAuthStore from '../../src/stores/authStore'; 
 
 const REGIONS = ['전체','서울','경기','강원','부산','대구','인천','광주','대전','울산','세종','충북','충남','전북','전남','경북','경남','제주'];
 const SORT_LABELS = ['인기순','후기순','최신순'];
@@ -37,8 +42,9 @@ export default function MarketHome() {
   const [error, setError]     = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ✅ 스토어
   const { isFavorite, likeDelta, syncFromList } = useFavoritesStore();
+  
+  const token = useAuthStore((state) => state.token);
 
   const load = useCallback(async () => {
     try {
@@ -49,7 +55,6 @@ export default function MarketHome() {
       const json = await res.json();
       const list = Array.isArray(json) ? json : (json.items ?? []);
 
-      // 최신순 정렬용 보강
       const now = Date.now();
       const enriched = list.map((it, idx) => ({
         ...it,
@@ -61,7 +66,7 @@ export default function MarketHome() {
       }));
 
       setItems(enriched);
-      syncFromList(enriched); // ✅ 상세에서 필요할 수 있는 기본 정보 동기화
+      syncFromList(enriched); 
     } catch (e) {
       setError(e.message || '네트워크 오류');
     } finally {
@@ -77,7 +82,6 @@ export default function MarketHome() {
     setRefreshing(false);
   }, [load]);
 
-  // 검색 + 지역 필터
   const filteredItems = useMemo(() => {
     const base = Array.isArray(items) ? items : [];
     const byRegion = region === '전체' ? base : base.filter(it => String(it.region) === String(region));
@@ -90,7 +94,6 @@ export default function MarketHome() {
     );
   }, [items, region, q]);
 
-  // 정렬
   const sortedItems = useMemo(() => {
     const arr = [...filteredItems];
     if (sortKey === '인기순') {
@@ -103,9 +106,10 @@ export default function MarketHome() {
     return arr;
   }, [filteredItems, sortKey]);
 
+
   const renderItem = ({ item }) => {
     const fav = isFavorite(String(item.id));
-    const likesShown = Number(item.likes) + (likeDelta[String(item.id)] ?? 0); // ✅ 상세에서 +1 반영
+    const likesShown = Number(item.likes) + (likeDelta[String(item.id)] ?? 0); 
     return (
       <TouchableOpacity
         style={styles.card}
@@ -156,12 +160,30 @@ export default function MarketHome() {
     );
   }
 
+  const handleProductCreatePress = () => {
+    if (token) {
+      router.push('/market/product/new');
+    } else {
+      Alert.alert(
+        '로그인 필요',
+        '상품을 등록하려면 로그인이 필요합니다.',
+        [
+          {
+            text: '로그인하기',
+            onPress: () => router.push('/login'), 
+          },
+          {
+            text: '취소',
+            style: 'cancel',
+          },
+        ]
+      );
+    }
+  };
+
   return (
     <View style={styles.root}>
-      {/* 상단바 */}
       <Header onBack={() => router.back()} onWishlist={() => router.push('/market/wishlist')} />
-
-      {/* 검색창 */}
       <View style={styles.searchRow}>
         <Ionicons name="search" size={18} color="#8aa0ad" />
         <TextInput
@@ -173,10 +195,7 @@ export default function MarketHome() {
           returnKeyType="search"
         />
       </View>
-
-      {/* 정렬/지역/상품등록 한 줄 배치 (3등분) */}
       <View style={styles.dropdownRow}>
-        {/* 정렬 기준 */}
         <View style={styles.dropdownCol}>
           <TouchableOpacity
             onPress={() => setOpenSortModal(true)}
@@ -186,7 +205,6 @@ export default function MarketHome() {
             <Text style={styles.dropdownText}>정렬: {sortKey}</Text>
             <Ionicons name="chevron-down" size={18} color="#6b7a86" />
           </TouchableOpacity>
-
           <Modal
             visible={openSortModal}
             animationType="fade"
@@ -221,12 +239,11 @@ export default function MarketHome() {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
-              </View>
+              </View
+>
             </TouchableOpacity>
           </Modal>
         </View>
-
-        {/* 지역 선택 */}
         <View style={styles.dropdownCol}>
           <TouchableOpacity
             onPress={() => setOpenRegionModal(true)}
@@ -238,7 +255,6 @@ export default function MarketHome() {
             </Text>
             <Ionicons name="chevron-down" size={18} color="#6b7a86" />
           </TouchableOpacity>
-
           <Modal
             visible={openRegionModal}
             animationType="fade"
@@ -278,12 +294,11 @@ export default function MarketHome() {
           </Modal>
         </View>
 
-        {/* ✅ 상품 등록 (같은 줄, 3등분) */}
         <View style={styles.dropdownCol}>
           <TouchableOpacity
             activeOpacity={0.9}
             style={styles.registerButton}
-            onPress={() => router.push('/market/product/new')}
+            onPress={handleProductCreatePress} 
           >
             <Text style={styles.registerText}>상품 등록</Text>
             <Ionicons name="add-circle-outline" size={18} color="#0f93a6" />
@@ -291,14 +306,11 @@ export default function MarketHome() {
         </View>
       </View>
 
-      {/* 오류표시 */}
       {!!error && (
         <Text style={{ color: 'red', marginTop: 6, marginLeft: 16 }}>
           불러오기 실패: {error}
         </Text>
       )}
-
-      {/* 목록 */}
       <FlatList
         data={sortedItems}
         keyExtractor={(it, idx) => String(it.id ?? idx)}
@@ -336,7 +348,6 @@ function Header({ onBack, onWishlist }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f1f7fa', paddingTop: 0},
-
   header: {
     height: 52,
     flexDirection: 'row',
@@ -346,7 +357,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: { textAlign: 'center', fontSize: 18, fontWeight: '800', color: '#0f3c45' },
-
   searchRow: {
     marginTop: 8,
     marginHorizontal: 16,
@@ -358,8 +368,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchInput: { marginLeft: 8, flex: 1, color: '#0f3c45' },
-
-  // 드롭다운/등록 버튼 한 줄 (3등분)
   dropdownRow: {
     marginTop: 10,
     paddingHorizontal: 16,
@@ -377,8 +385,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   dropdownText: { fontWeight: '700', color: '#0f3c45' },
-
-  // 상품 등록 버튼 스타일 (동일 라인, 동일 높이)
   registerButton: {
     height: 40,
     borderRadius: 10,
@@ -389,14 +395,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   registerText: { fontWeight: '800', color: '#0f93a6' },
-
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', padding: 20 },
   modalSheet: { backgroundColor: '#fff', borderRadius: 14, maxHeight: '70%', overflow: 'hidden' },
   modalHeader: { padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#e5e7eb' },
   modalTitle: { fontSize: 16, fontWeight: '800', color: '#0f3c45' },
   modalItem: { paddingHorizontal: 16, paddingVertical: 14 },
   modalItemText: { color: '#0f3c45', fontWeight: '600' },
-
   card: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
@@ -410,11 +414,9 @@ const styles = StyleSheet.create({
   },
   thumbWrap: { width: 96, height: 96, borderRadius: 12, overflow: 'hidden', marginRight: 12, backgroundColor: '#dfe9ef' },
   thumb: { width: '100%', height: '100%' },
-
   title: { fontSize: 20, fontWeight: '900', color: '#0f3c45' },
   location: { marginTop: 4, color: '#5b7280' },
   desc: { marginTop: 6, color: '#4b5d67' },
-
   metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
   metaChip: {
     flexDirection: 'row',

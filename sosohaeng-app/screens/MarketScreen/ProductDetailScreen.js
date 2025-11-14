@@ -12,11 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
-import { API_BASE_URL } from "../../src/config/api";
+import { API_BASE_URL, SERVER_ROOT_URL } from "../../src/config/api";
 import useFavoritesStore from "../stores/favoritesStore";
-
-// /api/v1을 제거하여 서버 루트 URL을 찾습니다.
-const SERVER_ROOT_URL = API_BASE_URL.replace("/api/v1", "");
 
 export default function ProductDetailScreen(props) {
   const params = useLocalSearchParams();
@@ -44,40 +41,45 @@ export default function ProductDetailScreen(props) {
       try {
         setFetching(true);
         
-        // ✅ [수정] 실제 API 엔드포인트에서 데이터 가져오기
         const res = await fetch(`${API_BASE_URL}/products/${id}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         
-        const detail = await res.json(); // API 응답 (market_router.py의 MarketProductOut)
+        const detail = await res.json(); 
 
-        // ✅ [수정] API 응답을 컴포넌트가 사용할 item 객체로 매핑
+        // [수정] image_url이 유효한지 더 엄격하게 검사 (.trim() 추가)
+        const validImages = (detail.images && detail.images.length > 0)
+          ? detail.images
+              // 1. img 객체와 image_url이 존재하고, 공백 제거 후에도 내용이 있는지 확인
+              .filter(img => img && img.image_url && String(img.image_url).trim()) 
+              // 2. 공백을 제거한 URL로 새 배열 생성
+              .map(img => `${SERVER_ROOT_URL}${String(img.image_url).trim()}`)
+          : [];
+
+        // [디버깅] 생성된 이미지 URL 배열을 콘솔에 출력
+        console.log("✅ 생성된 이미지 URL:", validImages);
+
         const mappedItem = {
           id: String(detail.id),
-          title: detail.shop_name || detail.title || "로컬 스토어", // 가게 이름
-          productName: detail.title || "상품", // 상품명
+          title: detail.shop_name || detail.title || "로컬 스토어", 
+          productName: detail.title || "상품", 
           region: detail.region || "",
           location: detail.location || "",
           rating: Number(detail.rating ?? 0),
           likes: Number(detail.likes ?? 0),
           price: Number(detail.price ?? 0),
           sellerNote: detail.seller_note || "",
-          // ✅ [수정] 이미지 URL을 절대 경로로 변환
-          images: (detail.images && detail.images.length > 0)
-            ? detail.images.map(img => `${SERVER_ROOT_URL}${img.image_url}`)
-            : [], // DB의 image_url은 /static/... 형태
+          images: validImages, // ✅ 수정된 배열 사용
           summary: detail.summary || "",
-          // ✅ [수정] delivery_info (문자열)를 배열로 감싸기
           delivery: [detail.delivery_info].filter(Boolean) 
         };
 
         if (alive) {
           setItem(mappedItem);
-          // 스토어에도 업데이트 (이미지 URL이 절대 경로로 전달됨)
           if (mappedItem) {
             upsertItem({
               id: mappedItem.id,
               title: mappedItem.productName,
-              image: mappedItem.images?.[0], // 첫 번째 (썸네일) 이미지
+              image: mappedItem.images?.[0], 
               location: mappedItem.location,
               price: mappedItem.price,
               rating: mappedItem.rating,
@@ -94,7 +96,7 @@ export default function ProductDetailScreen(props) {
       }
     })();
     return () => { alive = false; };
-  }, [id, upsertItem]); // id와 upsertItem에 의존
+  }, [id, upsertItem]);
 
   const router = useRouter();
   const navigation = useNavigation();
