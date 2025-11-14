@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { useRouter } from 'expo-router'; 
 import apiClient from '../src/config/client';  
@@ -18,11 +19,17 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isBusiness, setIsBusiness] = useState(false);
+  const [businessNumber, setBusinessNumber] = useState('');
 
   const handleRegister = async () => {
     if (!email || !password|| !username) {
       Alert.alert("입력 오류", "모든 항목을 입력해주세요.");
       return;
+    }
+    if (isBusiness && businessNumber.length !== 10) {
+        alert('사업자 등록 번호를 10자리 숫자로 정확히 입력해주세요.');
+        return;
     }
 
     setIsLoading(true);
@@ -31,7 +38,9 @@ export default function RegisterScreen() {
       const response = await apiClient.post("/auth/register", { 
         username, 
         email, 
-        password 
+        password,
+        is_business: isBusiness,
+        business_registration_number: isBusiness ? businessNumber : null, 
       });
 
       Alert.alert("회원가입 성공", "이제 로그인할 수 있습니다.", [
@@ -73,6 +82,26 @@ export default function RegisterScreen() {
         secureTextEntry
         maxLength={50}
       />
+
+      <View style={styles.toggleContainer}>
+        <Text>사업자입니다</Text>
+        <Switch
+        value={isBusiness}
+        onValueChange={setIsBusiness} // isBusiness 상태를 바로 업데이트
+        trackColor={{ false: "#767577", true: "#81b0ff" }}
+        thumbColor={isBusiness ? "#f5dd4b" : "#f4f3f4"}
+        />
+        </View>
+        {isBusiness && (
+          <TextInput
+          style={styles.input}
+          placeholder="사업자 등록 번호 (10자리 숫자)"
+          value={businessNumber}
+          onChangeText={setBusinessNumber}
+          keyboardType="numeric" // 숫자 키보드만 표시
+          maxLength={10} // 10자리로 제한
+          />
+          )}
 
       <TouchableOpacity
         style={[styles.button, { backgroundColor: "#28a745" }]}
