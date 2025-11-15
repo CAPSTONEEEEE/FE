@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+// ▼▼▼ [수정] useFocusEffect 임포트 ▼▼▼
+import { useRouter, useFocusEffect } from 'expo-router';
 import { API_BASE_URL } from '../../src/config/api';
 
 // favoritesStore는 screens/stores/ 에서
@@ -42,7 +43,8 @@ export default function MarketHome() {
   const [error, setError]     = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { isFavorite, likeDelta, syncFromList } = useFavoritesStore();
+  // [수정] likeDelta, syncFromList 제거, fetchFavorites 추가 (이전 단계에서 반영됨)
+  const { isFavorite, fetchFavorites } = useFavoritesStore();
   
   const token = useAuthStore((state) => state.token);
 
@@ -66,21 +68,34 @@ export default function MarketHome() {
       }));
 
       setItems(enriched);
-      syncFromList(enriched); 
+      // [수정] syncFromList(enriched); 호출 제거 (이전 단계에서 반영됨)
     } catch (e) {
       setError(e.message || '네트워크 오류');
     } finally {
       setLoading(false);
     }
-  }, [syncFromList]);
+  }, []); // [수정] syncFromList 의존성 제거 (이전 단계에서 반영됨)
 
-  useEffect(() => { load(); }, [load]);
 
+  // ▼▼▼ [핵심 수정] useEffect -> useFocusEffect 로 변경 ▼▼▼
+  // 이렇게 하면 상품 등록 후 돌아올 때마다 목록을 새로고침합니다.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+      fetchFavorites();
+    }, [load, fetchFavorites])
+  );
+  // ▲▲▲ [핵심 수정] ▲▲▲
+
+  // [수정] onRefresh 시 fetchFavorites도 병렬 호출 (이전 단계에서 반영됨)
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
+    await Promise.all([
+      load(),
+      fetchFavorites()
+    ]);
     setRefreshing(false);
-  }, [load]);
+  }, [load, fetchFavorites]); // [수정] fetchFavorites 의존성 추가 (이전 단계에서 반영됨)
 
   const filteredItems = useMemo(() => {
     const base = Array.isArray(items) ? items : [];
@@ -108,8 +123,13 @@ export default function MarketHome() {
 
 
   const renderItem = ({ item }) => {
-    const fav = isFavorite(String(item.id));
-    const likesShown = Number(item.likes) + (likeDelta?.[String(item.id)] ?? 0); 
+    // [수정] isFavorite에 2번째 인자로 'PRODUCT' 추가 (이전 단계에서 반영됨)
+    const fav = isFavorite(String(item.id), 'PRODUCT');
+    // [수정] likeDelta 로직 제거 (이전 단계에서 반영됨)
+    const likesShown = Number(item.likes); 
+    
+    // ▼▼▼ [수정] item.image를 사용하도록 변경 ▼▼▼
+    // (schemas.py의 @computed_field가 'image' 필드를 채워줍니다)
     return (
       <TouchableOpacity
         style={styles.card}
@@ -122,7 +142,7 @@ export default function MarketHome() {
         }
       >
         <View style={styles.thumbWrap}>
-          {item.image ? (
+          {item.image ? ( // item.image 사용 (schemas.py에서 계산해 줌)
             <Image source={{ uri: item.image }} style={styles.thumb} />
           ) : (
             <View style={[styles.thumb, { backgroundColor: '#dfe9ef' }]} />
@@ -131,7 +151,7 @@ export default function MarketHome() {
         <View style={{ flex: 1, paddingRight: 6 }}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.location} numberOfLines={1}>📍 {item.location}</Text>
-          {!!item.desc && (<Text style={styles.desc} numberOfLines={2}>{item.desc}</Text>)}
+          {!!item.summary && (<Text style={styles.desc} numberOfLines={2}>{item.summary}</Text>)}
           <View style={styles.metaRow}>
             <View style={styles.metaChip}>
               <Ionicons name="star" size={14} color="#0f93a6" />
