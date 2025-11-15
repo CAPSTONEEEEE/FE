@@ -1,146 +1,157 @@
 // screens/stores/favoritesStore.js
-// 전역 찜(위시리스트) 스토어
-// 사용처 예시:
-//  const { isFavorite, toggleFavorite, favoritesArray, likeDelta, upsertItem, syncFromList } = useFavoritesStore();
-
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { produce } from 'immer';
+import { toggleFavorite, getFavorites } from '../../src/config/api'; 
+import useAuthStore from '../../src/stores/authStore'; 
 
-// 위시리스트에 저장할 item의 최소 스키마
-// { id, title, image, location, price, rating, likes, region }
+const initialState = {
+    festivals: [], 
+    products: [], 
+    spots: [], 
+    isLoading: false,
+    error: null,
+};
 
-const useFavoritesStore = create(
-  persist(
-    (set, get) => ({
-      // 내부 상태
-      favorites: {},         // { [id]: item }
-      order: [],             // 보여줄 순서(최근 추가 우선)
-      likeDelta: {},         // { [id]: number }  // 상세에서 +1 한 카운터 반영용
+// 찜 항목을 구분하는 키를 생성하는 헬퍼 함수
+const getFavoriteKey = (item_type, item_id) => `${item_type}_${item_id}`;
 
-      // ---------- Selectors ----------
-      isFavorite: (id) => !!get().favorites[String(id)],
-      favoritesArray: [],
+const useFavoritesStore = create((set, get) => ({
+    ...initialState,
 
-      // ---------- Mutators ----------
-      // 목록에서 넘어온 데이터(또는 상세에서 로딩한 데이터)를 스토어에 보강 저장
-      upsertItem: (partial) => {
-        if (!partial || !partial.id) return;
-        const id = String(partial.id);
-        const { favorites } = get();
-        const prev = favorites[id] || {};
-        const merged = {
-          id,
-          title: partial.title ?? prev.title ?? '',
-          image: partial.image ?? prev.image ?? null,
-          location: partial.location ?? prev.location ?? '',
-          price: Number(partial.price ?? prev.price ?? 0),
-          rating: Number(partial.rating ?? prev.rating ?? 0),
-          likes: Number(partial.likes ?? prev.likes ?? 0),
-          region: partial.region ?? prev.region ?? '',
-        };
-        const next = { ...favorites, [id]: merged };
-        set({ favorites: next, favoritesArray: remapArray(get().order, next) });
-      },
+    // ----------------------------------------------------
+    // 1. 상태 조회 함수
+    // ----------------------------------------------------
 
-      // 목록 API 로드 직후 최소 정보 동기화 (즐겨찾기 여부와 무관)
-      syncFromList: (list) => {
+    /**
+     * 특정 항목이 찜 목록에 있는지 확인
+     * @param {number|string} itemId - 항목의 고유 ID
+     * @param {string} itemType - 항목 타입 (FESTIVAL, PRODUCT, SPOT)
+     * @returns {boolean}
+     */
+    isFavorite: (itemId, itemType = 'FESTIVAL') => {
+        if (!itemId || !itemType) return false;
+        
+        const idKey = getFavoriteKey(itemType.toUpperCase(), String(itemId));
+        
+        // 모든 찜 목록을 하나의 Set으로 변환하여 빠르게 확인
+        const allFavorites = [
+            ...get().festivals,
+            ...get().products,
+            ...get().spots,
+        ];
+        
+        return allFavorites.some(item => getFavoriteKey(item.item_type, item.item_id) === idKey);
+    },
+
+    // ----------------------------------------------------
+    // 2. API 통신 및 상태 업데이트 함수
+    // ----------------------------------------------------
+
+    /**
+     * 서버에서 전체 찜 목록을 불러와 스토어에 저장
+     */
+    fetchFavorites: async () => {
+
+        const MAX_WAIT_TIME = 5000;
+        const START_TIME = Date.now();
+
+        while (useAuthStore.getState().isAuthLoading && (Date.now() - START_TIME < MAX_WAIT_TIME)) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+      
+        const { token } = useAuthStore.getState();
+        if (!token) {
+            console.warn("인증 토큰이 없어 찜 목록을 불러올 수 없습니다.");
+            set({ festivals: [], products: [], spots: [], isLoading: false });
+            return;
+        }
+        
+
+        set({ isLoading: true, error: null });
         try {
-          if (!Array.isArray(list)) return;
-          const { favorites } = get();
-          const next = { ...favorites };
-          list.forEach((it) => {
-            if (!it || !it.id) return;
-            const id = String(it.id);
-            const prev = next[id] || {};
-            next[id] = {
-              id,
-              title: it.title ?? it.productName ?? prev.title ?? '',
-              image: it.image ?? (Array.isArray(it.images) ? it.images[0] : prev.image) ?? null,
-              location: it.location ?? prev.location ?? '',
-              price: Number(it.price ?? prev.price ?? 0),
-              rating: Number(it.rating ?? prev.rating ?? 0),
-              likes: Number(it.likes ?? prev.likes ?? 0),
-              region: it.region ?? prev.region ?? '',
-            };
-          });
-          set({ favorites: next, favoritesArray: remapArray(get().order, next) });
-        } catch {}
-      },
+            const data = await getFavorites(token);
 
-      // 찜 토글: 없으면 추가(+1), 있으면 해제(-1)
-      toggleFavorite: (itemOrId) => {
-        const id = String(typeof itemOrId === 'string' ? itemOrId : itemOrId?.id);
-        if (!id) return;
+            set(produce(state => {
+                // 서버 응답 구조 (FavoriteListResponse)를 기반으로 상태 업데이트
+                state.festivals = data.festivals || [];
+                state.products = data.products || [];
+                // 추천 여행지(spots)가 List<List> 형태일 경우, List<FavoriteItemOut> 형태로 평탄화
+                state.spots = (data.spots || []).flat(); 
+            }));
+            
+        } catch (e) {
+            console.error("찜 목록 불러오기 실패:", e);
+            set({ error: e.message || "찜 목록을 불러오는 데 실패했습니다." });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
 
-        const { favorites, order, likeDelta } = get();
-        const exists = !!favorites[id];
-
-        // 추가 시, item 정보가 객체로 들어왔다면 upsert 보강
-        if (!exists && typeof itemOrId === 'object') {
-          get().upsertItem(itemOrId);
+    /**
+     * 특정 항목의 찜 상태를 토글하고 스토어 상태를 업데이트
+     * @param {object} item - 찜/찜 해제할 항목 객체 (FestivalRead, MarketProductOut 등)
+     * @param {string} type - 항목 타입 (FESTIVAL, PRODUCT, SPOT)
+     */
+    toggleFavorite: async (item, type = 'FESTIVAL') => {
+        const itemType = type.toUpperCase();
+        // 축제 상세 화면처럼 item 객체만 넘어왔을 경우 item.id를 사용
+        const itemId = item.contentid || item.id; 
+        
+        if (!itemId) {
+            console.error("찜 항목의 ID를 찾을 수 없습니다.");
+            return;
         }
 
-        if (exists) {
-          // 해제: order에서 제거, likeDelta -1 (최소 0)
-          const nextFav = { ...favorites };
-          delete nextFav[id];
-          const nextOrder = order.filter((x) => x !== id);
-          const cur = Number(likeDelta[id] ?? 0);
-          const nextDelta = { ...likeDelta, [id]: Math.max(cur - 1, 0) };
-          set({
-            favorites: nextFav,
-            order: nextOrder,
-            favoritesArray: remapArray(nextOrder, nextFav),
-            likeDelta: nextDelta,
-          });
-        } else {
-          // 추가: order 맨 앞에, likeDelta +1
-          const nextOrder = [id, ...order.filter((x) => x !== id)];
-          const cur = Number(likeDelta[id] ?? 0);
-          const nextDelta = { ...likeDelta, [id]: cur + 1 };
-          set({
-            order: nextOrder,
-            favoritesArray: remapArray(nextOrder, get().favorites),
-            likeDelta: nextDelta,
-          });
+        const { token } = useAuthStore.getState();
+        if (!token) {
+            // 사용자에게 로그인 필요 알림 (Alert는 컴포넌트에서 처리하는 것이 좋음)
+            console.warn("로그인이 필요합니다.");
+            return;
         }
-      },
+        
+        const isCurrentlyFavorite = get().isFavorite(itemId, itemType);
 
-      // 전부 지우기 (디버깅용)
-      clearAll: () => set({ favorites: {}, order: [], favoritesArray: [], likeDelta: {} }),
-    }),
-    {
-      name: 'sosohaeng-favorites-v1',
-      version: 1,
-      storage: createJSONStorage(() => AsyncStorage),
-      partialize: (state) => ({
-        favorites: state.favorites,
-        order: state.order,
-        likeDelta: state.likeDelta,
-      }),
-      onRehydrateStorage: () => (state) => {
-        // 복원 후 favoritesArray 재계산
-        if (!state) return;
-        const { order, favorites } = state;
-        state.favoritesArray = remapArray(order || [], favorites || {});
-      },
-    }
-  )
-);
+        try {
+            // 1. 서버에 토글 요청
+            const apiResponse = await toggleFavorite(itemType, itemId, token);
+            // 서버 응답 (200/201/204) 성공 시 로컬 상태 업데이트
+            
+            // 2. 로컬 상태 업데이트 (Immer 사용)
+            set(produce(state => {
+                const targetKey = itemType.toLowerCase() + 's'; // 'festivals', 'products', 'spots'
+                const favoritesList = state[targetKey];
+                
+                if (isCurrentlyFavorite) {
+                    // 찜 해제: 목록에서 제거
+                    state[targetKey] = favoritesList.filter(
+                        fav => getFavoriteKey(fav.item_type, fav.item_id) !== getFavoriteKey(itemType, itemId)
+                    );
+                    console.log(`[찜 해제] ${itemType}: ${itemId}`);
+                } else {
+                    // 찜 추가: 목록에 추가
+                    const newFavoriteItem = {
+                        item_id: String(itemId), // DB 저장 형태에 맞춰 String으로
+                        item_type: itemType,
+                        title: item.title || '제목 없음',
+                        image_url: item.image_url || item.images?.[0]?.image_url || null, 
+                    };
+                    favoritesList.push(newFavoriteItem);
+                    console.log(`[찜 추가] ${itemType}: ${itemId}`);
+                }
+            }));
 
-// order + favorites로 배열 재구성
-function remapArray(order, favorites) {
-  const list = [];
-  (order || []).forEach((id) => {
-    const item = favorites?.[id];
-    if (item) list.push(item);
-  });
-  // 혹시 order에 없는데 favorites에만 남아있는게 있으면 뒤에 붙여줌
-  Object.keys(favorites || {}).forEach((id) => {
-    if (!order?.includes(id)) list.push(favorites[id]);
-  });
-  return list;
-}
+        } catch (e) {
+            console.error("찜 토글 실패:", e);
+            // 실패 시 사용자에게 알림 필요
+        }
+    },
+    
+    // ----------------------------------------------------
+    // 3. 기타 유틸리티 함수
+    // ----------------------------------------------------
+    
+    // 스토어 초기화
+    resetFavorites: () => set(initialState),
+}));
 
 export default useFavoritesStore;

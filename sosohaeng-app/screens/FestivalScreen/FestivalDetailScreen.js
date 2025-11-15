@@ -31,9 +31,10 @@ const formatDate = (dateStr) => {
  * @param {string} props.distance - 목록 화면에서 포맷팅되어 전달된 거리 문자열
  */
 export default function FestivalDetailScreen({ festival, distance }) {
-  // Zustand 찜 스토어 연동
-  const isFavorite = useFavoritesStore((state) => state.isFavorite(festival?.id));
+  // isFavorite 함수 호출 시 itemType 명시 (FESTIVAL)
+  const isFavorite = useFavoritesStore((state) => state.isFavorite(festival?.contentid || festival?.id, 'FESTIVAL'));
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+
 
   if (!festival) {
     return (
@@ -44,16 +45,14 @@ export default function FestivalDetailScreen({ festival, distance }) {
   }
   const festivalDistance = festival.distance;
   const formattedDistance = formatDistance(festivalDistance);
-  // 찜 버튼 핸들러
-  const handleFavoritePress = () => {
-    toggleFavorite(festival); // 축제 객체 전체를 스토어에 넘겨 찜/찜 해제 요청
-    Alert.alert(
-        "찜 알림",
-        isFavorite ? `${festival.title} 찜 목록에서 제거되었습니다.` : `${festival.title} 찜 목록에 추가되었습니다.`
-    );
-  };
+  const handleFavoritePress = async () => {
+    const itemId = festival.contentid || festival.id; 
+    
+    await toggleFavorite(festival, 'FESTIVAL'); 
 
-  return (
+    console.log(`[FE] 찜 토글 요청 완료 (ID: ${itemId})`);
+};
+    return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       
       {/* 1. 이미지 표시 */}
