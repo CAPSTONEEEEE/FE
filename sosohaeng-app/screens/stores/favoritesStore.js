@@ -17,6 +17,7 @@ const getFavoriteKey = (item_type, item_id) => `${item_type}_${item_id}`;
 
 const useFavoritesStore = create((set, get) => ({
     ...initialState,
+    likeDelta: {},
 
     // ----------------------------------------------------
     // 1. 상태 조회 함수

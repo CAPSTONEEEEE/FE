@@ -109,7 +109,7 @@ export default function MarketHome() {
 
   const renderItem = ({ item }) => {
     const fav = isFavorite(String(item.id));
-    const likesShown = Number(item.likes) + (likeDelta[String(item.id)] ?? 0); 
+    const likesShown = Number(item.likes) + (likeDelta?.[String(item.id)] ?? 0); 
     return (
       <TouchableOpacity
         style={styles.card}
