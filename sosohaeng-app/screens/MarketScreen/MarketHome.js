@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 // ▼▼▼ [수정] useFocusEffect 임포트 ▼▼▼
 import { useRouter, useFocusEffect } from 'expo-router';
-import { API_BASE_URL } from '../../src/config/api';
+import { API_BASE_URL, SERVER_ROOT_URL } from '../../src/config/api';
 
 // favoritesStore는 screens/stores/ 에서
 import useFavoritesStore from '../stores/favoritesStore';
@@ -48,16 +48,29 @@ export default function MarketHome() {
   
   const token = useAuthStore((state) => state.token);
 
+  // [수정 1] load 함수가 필터 값을 백엔드로 보내도록 수정
   const load = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/products`);
+
+      // ▼▼▼ [핵심 수정] URLSearchParams로 API 쿼리 파라미터 생성 ▼▼▼
+      const params = new URLSearchParams();
+      if (q) params.append('q', q);
+      params.append('region', region);
+      params.append('sort', sortKey);
+
+      params.append('size', 100); // 100개 아이템을 요청
+
+      const res = await fetch(`${API_BASE_URL}/products?${params.toString()}`);
+      // ▲▲▲ [핵심 수정] ▲▲▲
+      
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       const list = Array.isArray(json) ? json : (json.items ?? []);
 
       const now = Date.now();
+      // ▼▼▼ [핵심 수정] 썸네일 보정 로직을 제거하고 원래 코드로 복구 ▼▼▼
       const enriched = list.map((it, idx) => ({
         ...it,
         _idx: idx,
@@ -66,6 +79,7 @@ export default function MarketHome() {
         likes:  Number(it?.likes  ?? 0),
         price:  Number(it?.price  ?? 0),
       }));
+      // ▲▲▲ [핵심 수정] 여기까지 ▲▲▲
 
       setItems(enriched);
       // [수정] syncFromList(enriched); 호출 제거 (이전 단계에서 반영됨)
@@ -74,18 +88,28 @@ export default function MarketHome() {
     } finally {
       setLoading(false);
     }
-  }, []); // [수정] syncFromList 의존성 제거 (이전 단계에서 반영됨)
+    // ▼▼▼ [핵심 수정] 의존성 배열에 q, region, sortKey 추가 ▼▼▼
+  }, [q, region, sortKey]); 
+  // ▲▲▲ [핵심 수정] ▲▲▲
 
 
-  // ▼▼▼ [핵심 수정] useEffect -> useFocusEffect 로 변경 ▼▼▼
-  // 이렇게 하면 상품 등록 후 돌아올 때마다 목록을 새로고침합니다.
+  // [수정 2] useEffect 추가 (필터 변경 시 새로고침)
+  // (q, region, sortKey가 바뀌면 load 함수가 바뀌고, 바뀐 load 함수가 이 useEffect를 실행)
+  useEffect(() => {
+    load();
+    // fetchFavorites는 load와 별개로 동작하므로 여기서는 호출 안 함
+  }, [load]);
+
+
+  // ▼▼▼ 기존 useFocusEffect (수정 없음) ▼▼▼
+  // (상품 등록 후 돌아올 때 새로고침을 위해 필요)
   useFocusEffect(
     useCallback(() => {
       load();
       fetchFavorites();
     }, [load, fetchFavorites])
   );
-  // ▲▲▲ [핵심 수정] ▲▲▲
+  // ▲▲▲ 기존 useFocusEffect (수정 없음) ▲▲▲
 
   // [수정] onRefresh 시 fetchFavorites도 병렬 호출 (이전 단계에서 반영됨)
   const onRefresh = useCallback(async () => {
@@ -97,29 +121,15 @@ export default function MarketHome() {
     setRefreshing(false);
   }, [load, fetchFavorites]); // [수정] fetchFavorites 의존성 추가 (이전 단계에서 반영됨)
 
-  const filteredItems = useMemo(() => {
-    const base = Array.isArray(items) ? items : [];
-    const byRegion = region === '전체' ? base : base.filter(it => String(it.region) === String(region));
-    const keyword = q.trim().toLowerCase();
-    if (!keyword) return byRegion;
-    return byRegion.filter(it =>
-      [it.title, it.desc, it.location, it.seller]
-        .filter(Boolean)
-        .some(v => String(v).toLowerCase().includes(keyword))
-    );
-  }, [items, region, q]);
 
-  const sortedItems = useMemo(() => {
-    const arr = [...filteredItems];
-    if (sortKey === '인기순') {
-      arr.sort((a, b) => (b.likes - a.likes) || (b.rating - a.rating));
-    } else if (sortKey === '후기순') {
-      arr.sort((a, b) => (b.rating - a.rating) || (b.likes - a.likes));
-    } else {
-      arr.sort((a, b) => (b._createdAt - a._createdAt) || (b._idx - a._idx));
-    }
-    return arr;
-  }, [filteredItems, sortKey]);
+  // ▼▼▼ [핵심 수정 3] ▼▼▼
+  //
+  // const filteredItems = useMemo(() => { ... });
+  //
+  // const sortedItems = useMemo(() => { ... });
+  //
+  // 위 두 개의 useMemo 훅을 삭제합니다. (백엔드가 필터링/정렬 담당)
+  // ▲▲▲ [핵심 수정 3] ▲▲▲
 
 
   const renderItem = ({ item }) => {
@@ -128,8 +138,15 @@ export default function MarketHome() {
     // [수정] likeDelta 로직 제거 (이전 단계에서 반영됨)
     const likesShown = Number(item.likes); 
     
-    // ▼▼▼ [수정] item.image를 사용하도록 변경 ▼▼▼
-    // (schemas.py의 @computed_field가 'image' 필드를 채워줍니다)
+    // ▼▼▼ [핵심 수정] 썸네일 URL 보정 로직 추가 ▼▼▼
+    let thumbnailUrl = item.image || null;
+    if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+      // 'http'로 시작하지 않는 상대 경로(/static/...)인 경우
+      // SERVER_ROOT_URL을 앞에 붙여 절대 경로로 만듭니다.
+      thumbnailUrl = `${SERVER_ROOT_URL || ''}${thumbnailUrl}`;
+    }
+    // ▲▲▲ [핵심 수정] ▲▲▲
+
     return (
       <TouchableOpacity
         style={styles.card}
@@ -142,11 +159,13 @@ export default function MarketHome() {
         }
       >
         <View style={styles.thumbWrap}>
-          {item.image ? ( // item.image 사용 (schemas.py에서 계산해 줌)
-            <Image source={{ uri: item.image }} style={styles.thumb} />
+          {/* ▼▼▼ [핵심 수정] item.image 대신 보정된 thumbnailUrl 사용 ▼▼▼ */}
+          {thumbnailUrl ? ( 
+            <Image source={{ uri: thumbnailUrl }} style={styles.thumb} />
           ) : (
             <View style={[styles.thumb, { backgroundColor: '#dfe9ef' }]} />
           )}
+          {/* ▲▲▲ [핵심 수정] ▲▲▲ */}
         </View>
         <View style={{ flex: 1, paddingRight: 6 }}>
           <Text style={styles.title}>{item.title}</Text>
@@ -332,7 +351,7 @@ export default function MarketHome() {
         </Text>
       )}
       <FlatList
-        data={sortedItems}
+        data={items} // ▼▼▼ [핵심 수정 4] sortedItems -> items ▼▼▼
         keyExtractor={(it, idx) => String(it.id ?? idx)}
         renderItem={renderItem}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100, paddingTop: 10 }}
