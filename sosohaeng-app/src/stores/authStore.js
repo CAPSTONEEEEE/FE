@@ -19,6 +19,7 @@ const useAuthStore = create((set) => ({
   // State
   token: null, // JWT token string
   user: null,  // User data (e.g., {id, email})
+  isAuthLoading: true,
   
   // Actions
   
@@ -48,6 +49,9 @@ const useAuthStore = create((set) => ({
     } catch (e) {
       console.error("Failed to initialize auth store:", e);
       return false;
+    }finally {
+      set({ isAuthLoading: false }); 
+      return success;
     }
   },
 }));

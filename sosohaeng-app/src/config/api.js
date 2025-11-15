@@ -1,41 +1,7 @@
 // FE/sosohaeng-app/src/config/api.js
-/*
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
-
-let base = process.env.EXPO_PUBLIC_API_BASE_URL; // .env 우선
-
-if (!base) {
-  // Expo dev server의 host 정보에서 LAN IP 추정
-  const hostUri =
-    Constants.expoConfig?.hostUri ||
-    Constants.manifest2?.extra?.expoClient?.hostUri ||
-    Constants.manifest?.debuggerHost; // ex) "192.168.0.67:8081"
-
-  if (hostUri) {
-    const host = hostUri.split(':')[0]; // 192.168.0.67
-    base = `http://${host}:8000`;
-  }
-}
-
-// 마지막 안전망(에뮬레이터 전용; 실기기에서는 작동 X)
-if (!base) {
-  base = Platform.select({
-    ios: 'http://127.0.0.1:8000',
-    android: 'http://10.0.2.2:8000',
-    default: 'http://127.0.0.1:8000',
-  });
-}
-
-export const API_BASE_URL = base;
-
-console.log("✅ 현재 설정된 API_BASE_URL:", API_BASE_URL);
-*/
-
-// FE/sosohaeng-app/src/config/api.js
+import apiClient from './client';
 
 // 1. 여기에 1단계에서 찾은 본인 Mac의 Wi-Fi IP 주소를 입력하세요.
-
 const MY_MAC_IP = '192.168.45.118'; 
 
 // 2. BE 서버 주소를 '/api/v1' 없이 루트로 설정합니다.
@@ -51,3 +17,62 @@ export const SERVER_ROOT_URL = base;
 
 console.log("✅ 현재 설정된 API_BASE_URL:", API_BASE_URL);
 console.log("✅ 현재 설정된 SERVER_ROOT_URL:", SERVER_ROOT_URL);
+
+// ----------------------------------------------------
+// 5. Favorites API 함수 
+// ----------------------------------------------------
+
+/**
+ * 찜 상태 토글. (POST 요청)
+ * @param {string} item_type - 찜 항목의 종류 (FESTIVAL, PRODUCT, SPOT)
+ * @param {number|string} item_id - 찜 항목의 고유 ID
+ * @param {string} token - 인증 토큰
+ * @returns {Promise<object>} 응답 데이터
+ */
+export async function toggleFavorite(item_type, item_id, token) {
+    const endpoint = '/favorites/'; 
+    
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    };
+
+    const data = {
+        item_type: item_type,
+        item_id: String(item_id)
+    };
+
+    try {
+        const response = await apiClient.post(endpoint, data, config);
+        // 서버에서 204 No Content를 반환할 수 있으므로, data가 없을 수 있습니다.
+        return response.data; 
+    } catch (error) {
+        console.error("Axios Toggle Favorite Failed:", error.response?.data || error.message);
+        throw error;
+    }
+}
+
+
+/**
+ * 사용자의 전체 찜 목록을 조회합니다. (GET 요청)
+ * @param {string} token - 인증 토큰
+ * @returns {Promise<object>} 
+ */
+export async function getFavorites(token) {
+    const endpoint = '/favorites/';
+    
+    const config = {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    };
+
+    try {
+        const response = await apiClient.get(endpoint, config);
+        return response.data;
+    } catch (error) {
+        console.error("Axios Get Favorites Failed:", error.response?.data || error.message);
+        throw error;
+    }
+}
