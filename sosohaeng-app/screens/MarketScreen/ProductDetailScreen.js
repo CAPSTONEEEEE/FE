@@ -26,9 +26,10 @@ export default function ProductDetailScreen(props) {
   const [item, setItem] = useState(null);
   const [fetching, setFetching] = useState(true);
 
-  const { isFavorite, toggleFavorite, likeDelta, upsertItem } = useFavoritesStore();
-  const liked = isFavorite(id);
-  const delta = likeDelta[id] ?? 0;
+  // [수정] likeDelta, upsertItem 제거 (이전 단계에서 반영됨)
+  const { isFavorite, toggleFavorite } = useFavoritesStore(); 
+  // [수정] itemType ('PRODUCT') 추가 (이전 단계에서 반영됨)
+  const liked = isFavorite(id, 'PRODUCT'); 
 
   useEffect(() => {
     if (!id) {
@@ -46,17 +47,29 @@ export default function ProductDetailScreen(props) {
         
         const detail = await res.json(); 
 
-        // [수정] image_url이 유효한지 더 엄격하게 검사 (.trim() 추가)
+        // ▼▼▼ [핵심 수정] ▼▼▼
+        // image_url이 http로 시작하는지 확인하는 로직 추가
         const validImages = (detail.images && detail.images.length > 0)
           ? detail.images
-              // 1. img 객체와 image_url이 존재하고, 공백 제거 후에도 내용이 있는지 확인
+              // 1. img 객체와 image_url이 유효한지 확인
               .filter(img => img && img.image_url && String(img.image_url).trim()) 
-              // 2. 공백을 제거한 URL로 새 배열 생성
-              .map(img => `${SERVER_ROOT_URL}${String(img.image_url).trim()}`)
+              .map(img => {
+                const url = String(img.image_url).trim();
+                
+                // 2. 이미 http:// 또는 https://로 시작하는 완전한 URL인 경우 (postimages 등)
+                if (url.startsWith('http://') || url.startsWith('https://')) {
+                  return url; // 그대로 사용
+                }
+                
+                // 3. 상대 경로인 경우 (/static/uploads/...) SERVER_ROOT_URL을 붙여줌
+                // (주의: SERVER_ROOT_URL이 null이나 undefined가 아니어야 함)
+                return `${SERVER_ROOT_URL || ''}${url}`;
+              })
           : [];
+        // ▲▲▲ [핵심 수정] ▲▲▲
 
         // [디버깅] 생성된 이미지 URL 배열을 콘솔에 출력
-        console.log("✅ 생성된 이미지 URL:", validImages);
+        console.log("✅ 상세페이지 이미지 URL:", validImages);
 
         const mappedItem = {
           id: String(detail.id),
@@ -75,18 +88,7 @@ export default function ProductDetailScreen(props) {
 
         if (alive) {
           setItem(mappedItem);
-          if (mappedItem) {
-            upsertItem({
-              id: mappedItem.id,
-              title: mappedItem.productName,
-              image: mappedItem.images?.[0], 
-              location: mappedItem.location,
-              price: mappedItem.price,
-              rating: mappedItem.rating,
-              likes: mappedItem.likes,
-              region: mappedItem.region,
-            });
-          }
+          // [수정] upsertItem 호출 블록 제거 (이전 단계에서 반영됨)
         }
       } catch (e) {
         console.error("상품 상세정보 불러오기 실패:", e);
@@ -96,7 +98,7 @@ export default function ProductDetailScreen(props) {
       }
     })();
     return () => { alive = false; };
-  }, [id, upsertItem]);
+  }, [id]); // [수정] upsertItem 의존성 제거 (이전 단계에서 반영됨)
 
   const router = useRouter();
   const navigation = useNavigation();
@@ -123,7 +125,8 @@ export default function ProductDetailScreen(props) {
     );
   }
 
-  const likesShown = Number(item.likes ?? 0) + delta;
+  // [수정] delta 제거 (이전 단계에서 반영됨)
+  const likesShown = Number(item.likes ?? 0); 
   
   return (
     <View style={styles.root}>
@@ -142,7 +145,7 @@ export default function ProductDetailScreen(props) {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
           {/* 이미지 */}
           <ScrollView
             horizontal
@@ -193,16 +196,21 @@ export default function ProductDetailScreen(props) {
                 <Text style={styles.chatText}>문의하기</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => toggleFavorite({
-                  id: item.id,
-                  title: item.productName,
-                  image: item.images?.[0], // 이미 절대경로
-                  location: item.location,
-                  price: Number(item.price ?? 0),
-                  rating: Number(item.rating ?? 0),
-                  likes: Number(item.likes ?? 0),
-                  region: item.region ?? '',
-                })}
+                onPress={() => toggleFavorite(
+                  // [수정] 스토어 통합 규격에 맞게 객체 전달 (이전 단계에서 반영됨)
+                  {
+                    id: item.id,
+                    title: item.productName, // 스토어는 'title' 사용
+                    image_url: item.images?.[0] || null, // 스토어는 'image_url' 사용
+                    
+                    location: item.location,
+                    price: Number(item.price ?? 0),
+                    rating: Number(item.rating ?? 0),
+                    likes: Number(item.likes ?? 0),
+                    region: item.region ?? '',
+                  },
+                  'PRODUCT' // [수정] 2번째 인자로 itemType ('PRODUCT') 전달 (이전 단계에서 반영됨)
+                )}
                 style={styles.favToggleBtn}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >

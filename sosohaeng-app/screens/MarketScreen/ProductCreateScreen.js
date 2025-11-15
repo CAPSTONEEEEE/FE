@@ -184,7 +184,7 @@ export default function ProductCreateScreen() {
           contentContainerStyle={{
             paddingHorizontal: 14,
             paddingTop: 14,
-            paddingBottom: insets.bottom + 50,
+            paddingBottom: insets.bottom + 90,
           }}
         >
           <Text style={styles.pageTitle}>상품 등록</Text>
