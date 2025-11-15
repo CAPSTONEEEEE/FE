@@ -7,7 +7,7 @@ import { useRouter } from "expo-router";
 
 const ICONS = {
   recommend: { active: "sparkles", inactive: "sparkles-outline", label: "추천" },
-  festivals: { active: "balloon", inactive: "balloon-outline", label: "축제" }, // 마음에 드는 걸로 교체 가능
+  festivals: { active: "balloon", inactive: "balloon-outline", label: "축제" },
   market:    { active: "bag",     inactive: "bag-outline",      label: "마켓" },
   settings:  { active: "settings",inactive: "settings-outline",  label: "설정" },
 };

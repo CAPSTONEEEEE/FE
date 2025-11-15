@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import TopBackBar from '../../components/TopBackBar';
+import TopBackBar from '../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { sendChatbotMessage } from '../../src/config/api_Recommend'; 
+import { sendChatbotMessage } from '../src/config/api_Recommend'; 
 
-const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
+const CHATBOT_ICON = require('../assets/icons/chatbot.png');
 
 const RecommendationCard = ({ recommendation, onDetailPress }) => {
   return (
@@ -142,7 +142,7 @@ export default function ChatbotRecommend() {
   return (
     <SafeAreaView style={styles.page}>
       <TopBackBar
-        title={<Text style={styles.titleText}>나에게 딱! 맞는 여행"</Text>}
+        title={<Text style={styles.titleText}>나에게 딱! 맞는 여행</Text>}
         right={
           <TouchableOpacity
             // 라우팅 오류 해결을 위해 Main 스택을 통해 '찜'으로 이동하도록 수정
@@ -152,7 +152,7 @@ export default function ChatbotRecommend() {
             <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
           </TouchableOpacity>
         }
-      />
+      />{ }
       <ScrollView
         ref={scrollViewRef} 
         style={styles.messageList} 
@@ -224,6 +224,63 @@ export default function ChatbotRecommend() {
     </SafeAreaView>
   );
 }
+
+
+
+const cardStyles = StyleSheet.create({
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    maxWidth: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  summaryText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  itemTitle: {
+    flex: 1,
+    fontSize: 15,
+    color: '#555',
+  },
+  detailButton: {
+    backgroundColor: '#6D99FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+  },
+  detailButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  footerText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#777',
+    textAlign: 'right',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 8,
+  }
+});
 
 // ------------------------------------
 // 스타일 코드
@@ -316,5 +373,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#6D99FF',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+  }
 });
