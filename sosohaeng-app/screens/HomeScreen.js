@@ -1,86 +1,215 @@
-// screens/HomeScreen.js
+// screens/HomeScreen.js 
 import React from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router'; 
 
-const HERO_SRC = require('../assets/icons/sosohaeng_logo2.png');
+const HERO_SRC = require('../assets/icons/sosohaeng_logo2.png'); // 소소행 로고
+
+// 기능별 카드를 위한 컴포넌트
+const FeatureCard = ({ iconName, title, description, color }) => (
+  <View style={cardStyles.cardContainer}>
+    <Ionicons name={iconName} size={20} color={color} style={{ marginRight: 10 }} />
+    <View style={cardStyles.textContainer}>
+      <Text style={[cardStyles.title, { color: color }]}>{title}</Text>
+      <Text style={cardStyles.description}>{description}</Text>
+    </View>
+    <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
+  </View>
+);
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets(); // ✅ 안전영역 값 가져오기
+  const insets = useSafeAreaInsets();
+  const router = useRouter(); 
 
+  const userName = "여행가 소소행";
+  
+  const handleGoToFavorites = () => {
+    router.push('/(tabs)/favorites'); 
+  };
+  
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor="#E8F6F8" />
+      
+      {/* === 0. 찜 버튼 (절대 위치로 상단 오른쪽 고정) === */}
+      <TouchableOpacity
+        style={[styles.favoritesButton, { top: insets.top + 5 }]} 
+        onPress={handleGoToFavorites} 
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Ionicons name="heart-outline" size={24} color="#ff4d6d" />
+      </TouchableOpacity>
+      {/* ============================================== */}
 
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          paddingTop: insets.top + 20, // ✅ 상단 여백 추가 (값 조절 가능)
+          paddingTop: insets.top + 40, 
           paddingHorizontal: 20,
-          paddingBottom: 120, // 하단바/FAB 겹침 방지
+          paddingBottom: 120, 
         }}
       >
-        {/* 오프닝 문구 */}
-        <Text style={styles.title}>소소행에 오신 걸 환영해요 👋</Text>
-        <Text style={styles.subtitle}>가까운 추천 여행지와 로컷 축제 및 특산물을 한 눈에!</Text>
+        {/* === 1. 사용자 환영/정보 섹션 (페이지처럼 보이도록) === */}
+        <View style={styles.userHeader}>
+          <Text style={styles.welcomeText}>안녕하세요, <Text style={{fontWeight: '900', color: '#0F172A'}}>{userName}님!</Text> 👋</Text>
+        </View>
 
-        {/* 오프닝 문구 아래 이미지 */}
+        {/* === 2. 이미지 섹션 및 핵심 액션 === */}
         <View style={styles.heroWrap}>
           <Image source={HERO_SRC} style={styles.heroImage} />
         </View>
+        
+        <View style={styles.actionSection}>
+           <Text style={styles.actionTitle}>오늘의 소소행 추천</Text>
+           <TouchableOpacity style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>맞춤 추천 시작하기</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+           </TouchableOpacity>
+        </View>
 
-        {/* 섹션 타이틀 */}
-        <Text style={styles.title}>SoSoHaeng - 소소행</Text>
-        <Text style={styles.subtitle}>: RAG 기반 소도시 여행지 추천 및 로컬 커머스 통합 플랫폼</Text>
+        {/* === 3. 주요 기능 리스트  === */}
+        <Text style={styles.mainTitle}>소소행 핵심 서비스</Text>
 
-        <Text style={styles.sectionTitle}>🚉여행지 추천</Text>
-        <Text style={styles.subtitle}>당신의 취향과 요구사항을 분석해, 소도시의 숨은 명소를 AI가 똑똑하게 골라드립니다.</Text>
+        <FeatureCard 
+          iconName="compass-outline"
+          title="AI 여행지 추천"
+          description="취향에 맞는 소도시의 숨은 명소를 AI가 똑똑하게 찾아줘요."
+          color="#6D99FF"
+        />
 
-        <Text style={styles.sectionTitle}>🎡축제 정보 제공</Text>
-        <Text style={styles.subtitle}>지금 가장 가까운 축제·행사 소식을 최신 일정과 함께 한눈에! 놓치기 아까운 즐길 거리를 바로 확인하세요.</Text>
+        <FeatureCard 
+          iconName="calendar-outline"
+          title="로컬 축제 정보"
+          description="가까운 축제·행사 소식과 일정을 최신 정보로 한눈에 확인하세요."
+          color="#FF6347"
+        />
 
-        <Text style={styles.sectionTitle}>🛍️로컬 마켓</Text>
-        <Text style={styles.subtitle}>지역 상인의 정직한 특산품을 모아보고, 판매자와 바로 대화해 안심하고 구매 연결까지 간편하게.</Text>
-        {/* ...추가 컨텐츠 */}
+        <FeatureCard 
+          iconName="storefront-outline"
+          title="지역 마켓/특산물"
+          description="지역 상인의 특산품을 모아보고, 판매자와 바로 연결해 구매해요."
+          color="#00A896"
+        />
+        
       </ScrollView>
     </View>
   );
 }
 
+// ------------------------------------
+// 스타일 코드
+// ------------------------------------
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#D5EDEF', // 홈 배경색
   },
-  title: {
-    marginTop: 6,
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#0F172A',
+  favoritesButton: { // 찜 버튼 스타일
+    position: 'absolute',
+    right: 20,
+    zIndex: 10, 
+    padding: 5,
   },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 14,
+  userHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: '500',
     color: '#475569',
+    flex: 1,
+  },
+  userStats: {
+    position: 'absolute',
+    top: 25,
+    left: 0,
+    fontSize: 12,
+    color: '#64748B',
+  },
+  profileButton: {
+    padding: 5,
   },
   heroWrap: {
-    marginTop: 14,
+    marginTop: 10,
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#DDF1F4',
-    alignItems: 'center',     // 자식(이미지) 수평 중앙정렬
+    alignItems: 'center',
+    marginBottom: 15,
   },
   heroImage: {
     width: '80%',
     height: undefined,
-    aspectRatio: 1,       // 1024x1024 → 정사각형
-    resizeMode: 'contain', // 이미지 잘리지 않게
+    aspectRatio: 1,
+    resizeMode: 'contain',
     alignSelf: 'center',
   },
-  sectionTitle: {
-    marginTop: 18,
+  actionSection: {
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  actionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0F172A',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    backgroundColor: '#6D99FF',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    marginRight: 5,
+    fontSize: 14,
+  },
+  mainTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 10,
+    marginTop: 10,
+  }
+});
+
+const cardStyles = StyleSheet.create({
+  cardContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    alignItems: 'center',
+    borderLeftWidth: 5,
+    borderLeftColor: '#00A896',
+  },
+  textContainer: {
+    flex: 1,
+    marginLeft: 5,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  description: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
   },
 });
