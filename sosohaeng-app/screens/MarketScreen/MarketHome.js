@@ -138,13 +138,15 @@ export default function MarketHome() {
     // [수정] likeDelta 로직 제거 (이전 단계에서 반영됨)
     const likesShown = Number(item.likes); 
     
-    // ▼▼▼ [핵심 수정] 썸네일 URL 보정 로직 추가 ▼▼▼
-    let thumbnailUrl = item.image || null;
-    if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
-      // 'http'로 시작하지 않는 상대 경로(/static/...)인 경우
-      // SERVER_ROOT_URL을 앞에 붙여 절대 경로로 만듭니다.
-      thumbnailUrl = `${SERVER_ROOT_URL || ''}${thumbnailUrl}`;
-    }
+    // ▼▼▼ [핵심 수정] 썸네일 URL 보정 로직 제거 (schemas.py가 절대 경로를 반환) ▼▼▼
+    // item.image가 이미 "http://..." 형태의 절대 경로이므로 그대로 사용합니다.
+    const thumbnailUrl = item.image || null;
+    
+    // (기존 보정 로직)
+    // let thumbnailUrl = item.image || null;
+    // if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+    //   thumbnailUrl = `${SERVER_ROOT_URL || ''}${thumbnailUrl}`;
+    // }
     // ▲▲▲ [핵심 수정] ▲▲▲
 
     return (
@@ -159,7 +161,7 @@ export default function MarketHome() {
         }
       >
         <View style={styles.thumbWrap}>
-          {/* ▼▼▼ [핵심 수정] item.image 대신 보정된 thumbnailUrl 사용 ▼▼▼ */}
+          {/* ▼▼▼ [핵심 수정] 보정 로직이 필요 없으므로 thumbnailUrl 변수를 바로 사용 ▼▼▼ */}
           {thumbnailUrl ? ( 
             <Image source={{ uri: thumbnailUrl }} style={styles.thumb} />
           ) : (
