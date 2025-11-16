@@ -110,22 +110,7 @@ function CustomTabBarComp({ state, navigation }) {
     </View>
   );
 }
-/* --------------------------------------------------------------- */
-// RecommendHome과 RandomRecommend를 위한 스택 내비게이터를 생성합니다.
-const RecommendStack = createNativeStackNavigator();
 
-// ✅ 새 스택 내비게이터 컴포넌트
-/* function RecommendStackScreen() {
-  return (
-    <RecommendStack.Navigator screenOptions={{ headerShown: false }}>
-      <RecommendStack.Screen name="RecommendHome" component={RecommendHome} />
-      <RecommendStack.Screen name="RandomRecommend" component={RandomRecommend} />
-      <RecommendStack.Screen name="ChatbotRecommend" component={ChatbotRecommend} />
-      <RecommendStack.Screen name="RandomResult" component={RandomResultScreen} />
-    </RecommendStack.Navigator>
-  );
-}*/
-/* --------------------------------------------------------------- */
 function Tabs() {
   return (
     <Tab.Navigator
