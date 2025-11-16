@@ -99,6 +99,10 @@ export default function ChatbotRecommend() {
   const scrollViewRef = useRef(null);
   const [loading, setLoading] = useState(false);
 
+  // 대화 상태 추적을 위한 상태 변수 추가 
+  const [currentProfile, setCurrentProfile] = useState({});
+  const [turnCount, setTurnCount] = useState(0);
+
   // 하단 탭바 + 홈바(안전영역) 높이만큼 띄우기 위한 계산
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
@@ -143,7 +147,9 @@ export default function ChatbotRecommend() {
     }
   }, [messages]); 
   
-  const handleSend = async () => {
+  // ChatbotRecommend.js (handleSend 함수 전체 교체)
+
+const handleSend = async () => {
     if (input.trim() === '' || loading) return;
 
     const userMessage = input.trim();
@@ -153,44 +159,89 @@ export default function ChatbotRecommend() {
     setMessages(prevMessages => [...prevMessages, newMessage]);
     setInput('');
     
-    // 2. 로딩 상태 시작 
+    // 2. API 호출을 위한 JSON 페이로드 생성 (서버의 새 로직에 맞춤)
+    const payload = JSON.stringify({
+        message: userMessage,
+        current_profile: currentProfile, // ⭐️ 현재 상태 포함 ⭐️
+        turn_count: turnCount           // ⭐️ 현재 턴 카운트 포함 ⭐️
+    });
+    
+    // 3. 로딩 상태 시작 
     setLoading(true);
 
     let botResponseText = "죄송합니다. 챗봇이 답변을 생성하는 데 실패했습니다. 서버 상태를 확인해주세요. 😟";
-    
+    let recommendations = []; // 추천 카드 데이터 저장용
+
     try {
-        // 3. API 호출
-        const apiResponse = await sendChatbotMessage(userMessage);
+        // 4. API 호출 (JSON 페이로드를 문자열로 보냅니다)
+        // sendChatbotMessage 함수는 문자열을 그대로 보내도록 구현되어야 합니다.
+        const apiResponse = await sendChatbotMessage(payload);
         
-        // 4. 챗봇 응답 텍스트 추출
+        // 5. 챗봇 응답 텍스트와 추천 목록 추출
         if (apiResponse && apiResponse.response) {
-            botResponseText = apiResponse.response;
+            const rawResponse = apiResponse.response;
+            recommendations = apiResponse.recommendations || [];
+            
+            // --- NEW: 서버가 반환한 JSON 구조를 파싱하여 상태 업데이트 ---
+            const profileMarkerStart = rawResponse.indexOf('---PROFILE_UPDATE---');
+            const profileMarkerEnd = rawResponse.indexOf('---END_PROFILE---');
+            
+            if (profileMarkerStart !== -1 && profileMarkerEnd !== -1) {
+                // QUESTION 모드 응답 처리
+                
+                const jsonStart = profileMarkerStart + '---PROFILE_UPDATE---'.length;
+                const jsonEnd = profileMarkerEnd;
+                const jsonString = rawResponse.substring(jsonStart, jsonEnd).trim();
+
+                try {
+                    const parsedData = JSON.parse(jsonString);
+                    
+                    // ⭐️ 상태 업데이트 ⭐️
+                    setCurrentProfile(parsedData.current_profile || {});
+                    setTurnCount(parsedData.turn_count || 0); 
+                    
+                    // 사용자에게 보여줄 텍스트는 next_question 부분만 추출
+                    botResponseText = parsedData.next_question || rawResponse.substring(0, profileMarkerStart).trim();
+                } catch (e) {
+                    console.error("클라이언트 JSON 파싱 실패:", e);
+                    botResponseText = rawResponse; // 파싱 실패 시 원본 텍스트 출력
+                }
+            } else {
+                // FINAL 모드 응답 또는 일반 텍스트 (추천 목록은 recommendations에 이미 담김)
+                botResponseText = rawResponse;
+                
+                // FINAL 모드 시에는 턴 카운트와 프로필을 초기화 (새 대화를 위해)
+                setCurrentProfile({});
+                setTurnCount(0);
+            }
         }
 
     } catch (error) {
         console.error("챗봇 API 호출 실패:", error);
     } finally {
-        // 5. 챗봇 응답 추가
+        // 6. 챗봇 응답 추가 (text와 recommendation card data를 분리하여 저장)
         const chatbotResponse = {
             id: messages.length + 1,
             text: botResponseText,
             user: 'chatbot',
-            image: CHATBOT_ICON
+            image: CHATBOT_ICON,
+            // ⭐️ 카드 데이터 추가 ⭐️
+            recommendations: recommendations.length > 0 ? recommendations : null
         };
         
         setMessages(prevMessages => [...prevMessages, chatbotResponse]);
         setLoading(false);
         
-        // 6. 키보드 닫히지 않도록 포커스 유지
+        // 7. 키보드 닫히지 않도록 포커스 유지
         if (inputRef.current) {
             inputRef.current.focus(); 
         }
     }
-  };
+};
 
   const handleDetailPress = (contentid) => {
       console.log(`상세 보기 요청: ${contentid}`);
-      Alert.alert("상세 보기", `ID ${contentid}의 상세 화면으로 이동합니다.`);
+      navigation.navigate('TravelSpotDetail', { contentId: contentid });
   };
 
   return (
@@ -223,8 +274,18 @@ export default function ChatbotRecommend() {
               <Text style={message.user === 'user' ? styles.userMessageText : styles.messageText}>
                   {message.text}
               </Text>
-
-              {/* 여기에 RecommendationCard 렌더링 로직이 있다면 추가합니다. 현재는 텍스트만 처리 */}
+              {/* RecommendationCard 렌더링 로직 추가 */}
+              {message.user === 'chatbot' && message.recommendations && (
+                <RecommendationCard 
+                    // message.text에 요약/안내가, message.recommendations에 목록이 담겨있다고 가정
+                    recommendation={{
+                        summaryText: message.text.split('\n\n')[0].trim(), // 첫 번째 줄을 요약으로 사용 (임시)
+                        items: message.recommendations,
+                        footerText: message.text.split('\n\n').pop().trim() // 마지막 줄을 안내로 사용 (임시)
+                    }}
+                    onDetailPress={handleDetailPress}
+                />
+              )}
             </View>
           </View>
         ))}
