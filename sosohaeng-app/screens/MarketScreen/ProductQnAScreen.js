@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     position: 'absolute', 
     right: 18, 
     // ▼▼▼ [수정 4] 탭바 위에 오도록 bottom 값 조정 (문제 4 해결) ▼▼▼
-    bottom: 90, 
+    bottom: 100, 
     width: 56, 
     height: 56, 
     borderRadius: 28,
