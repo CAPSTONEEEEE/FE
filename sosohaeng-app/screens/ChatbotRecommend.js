@@ -8,17 +8,48 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { sendChatbotMessage } from '../src/config/api_Recommend'; 
 
+import useFavoritesStore from '../screens/stores/favoritesStore'; 
+import useAuthStore from '../src/stores/authStore';
+
 const CHATBOT_ICON = require('../assets/icons/chatbot.png');
 
-const RecommendationCard = ({ recommendation, onDetailPress }) => {
-  return (
-    <View style={cardStyles.cardContainer}>
-      <Text style={cardStyles.summaryText}>{recommendation.summaryText}</Text>
-      
-      {recommendation.items.map((item, index) => (
-        <View key={index} style={cardStyles.itemRow}>
+const ItemRowWithFavorite = ({ item, onDetailPress }) => {
+    // 챗봇 추천 여행지는 'SPOT' 타입으로 간주
+    const isFavorite = useFavoritesStore((state) => state.isFavorite(item.contentid, 'SPOT'));
+    const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+    const { token } = useAuthStore.getState();
+
+    const handleFavoritePress = async () => {
+        if (!token) {
+            Alert.alert("로그인 필요", "찜 기능은 로그인 후에 사용 가능합니다.");
+            return;
+        }
+        // 'SPOT' 타입으로 찜 토글 요청
+        await toggleFavorite({ 
+            contentid: item.contentid, 
+            title: item.title, 
+            image_url: item.firstimage || item.image_url || null, 
+        }, 'SPOT');
+    };
+
+    return (
+        <View key={item.contentid} style={cardStyles.itemRow}>
           <Ionicons name="location-sharp" size={16} color="#6D99FF" style={{ marginRight: 8 }} />
           <Text style={cardStyles.itemTitle}>{item.title}</Text>
+
+          {/* 찜 버튼 추가 */}
+          <TouchableOpacity 
+              onPress={handleFavoritePress}
+              style={cardStyles.favoriteButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+              <Ionicons 
+                  name={isFavorite ? 'heart' : 'heart-outline'} 
+                  size={20} 
+                  color={isFavorite ? '#ff4d6d' : '#999'} 
+              />
+          </TouchableOpacity>
+          
           <TouchableOpacity 
             style={cardStyles.detailButton} 
             onPress={() => onDetailPress(item.contentid)}
@@ -26,6 +57,24 @@ const RecommendationCard = ({ recommendation, onDetailPress }) => {
             <Text style={cardStyles.detailButtonText}>상세 보기</Text>
           </TouchableOpacity>
         </View>
+    );
+};
+
+// -----------------------------------------------------------------
+// [수정: RecommendationCard: 명확한 단일 리턴 유지]
+// -----------------------------------------------------------------
+const RecommendationCard = ({ recommendation, onDetailPress }) => {
+  return (
+    <View style={cardStyles.cardContainer}>
+      <Text style={cardStyles.summaryText}>{recommendation.summaryText}</Text>
+      
+      {/* ItemRowWithFavorite 컴포넌트 사용 */}
+      {recommendation.items.map((item, index) => (
+        <ItemRowWithFavorite 
+            key={item.contentid || index} 
+            item={item} 
+            onDetailPress={onDetailPress} 
+        />
       ))}
       
       {recommendation.footerText && (
@@ -139,20 +188,14 @@ export default function ChatbotRecommend() {
     }
   };
 
+  const handleDetailPress = (contentid) => {
+      console.log(`상세 보기 요청: ${contentid}`);
+      Alert.alert("상세 보기", `ID ${contentid}의 상세 화면으로 이동합니다.`);
+  };
+
   return (
     <SafeAreaView style={styles.page}>
-      <TopBackBar
-        title={<Text style={styles.titleText}>나에게 딱! 맞는 여행</Text>}
-        right={
-          <TouchableOpacity
-            // 라우팅 오류 해결을 위해 Main 스택을 통해 '찜'으로 이동하도록 수정
-            onPress={() => navigation.navigate('Main', { screen: '찜' })} 
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="heart-outline" size={22} color="#ff4d6d" />
-          </TouchableOpacity>
-        }
-      />{ }
+      
       <ScrollView
         ref={scrollViewRef} 
         style={styles.messageList} 
@@ -180,6 +223,8 @@ export default function ChatbotRecommend() {
               <Text style={message.user === 'user' ? styles.userMessageText : styles.messageText}>
                   {message.text}
               </Text>
+
+              {/* 여기에 RecommendationCard 렌더링 로직이 있다면 추가합니다. 현재는 텍스트만 처리 */}
             </View>
           </View>
         ))}
