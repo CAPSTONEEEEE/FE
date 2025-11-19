@@ -12,7 +12,7 @@ import {
   Image,
   Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import TopBackBar from '../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -86,13 +86,17 @@ const ItemRowWithFavorite = ({ item, onDetailPress }) => {
 // -----------------------------------------------------------------
 // 추천 카드 (요약 + 아이템 리스트 + 푸터 텍스트)
 // -----------------------------------------------------------------
-const RecommendationCard = ({ recommendation, onDetailPress }) => {
+const RecommendationCard = ({ recommendation, onDetailPress, rawText }) => {
   return (
     <View style={cardStyles.cardContainer}>
-      {!!recommendation.summaryText && (
-        <Text style={cardStyles.summaryText}>{recommendation.summaryText}</Text>
+      {/* 백엔드에서 파싱된 순수 AI 텍스트를 그대로 표시 */}
+      {!!rawText && (
+        <Text style={cardStyles.summaryText}>
+          {rawText}
+        </Text>
       )}
 
+      {/* DB 추천 아이템 목록만 명확하게 표시 */}
       {Array.isArray(recommendation.items) &&
         recommendation.items.map((item, index) => (
           <ItemRowWithFavorite
@@ -101,12 +105,38 @@ const RecommendationCard = ({ recommendation, onDetailPress }) => {
             onDetailPress={onDetailPress}
           />
         ))}
-
-      {!!recommendation.footerText && (
-        <Text style={cardStyles.footerText}>{recommendation.footerText}</Text>
-      )}
     </View>
   );
+};
+
+const parseFinalButtonResponse = (rawResponse) => {
+    const RECOMMENDATION_MARKER = "---RECOMMENDATION---";
+    const [headerAndRecommendations, footerRaw] = rawResponse.split('\n※'); 
+    
+    // 1. 요약 텍스트 추출 (첫 번째 마커 이전까지)
+    const summaryText = headerAndRecommendations.split(RECOMMENDATION_MARKER)[0].trim();
+    
+    // 2. 추천 블록 파싱
+    const recommendationBlocks = headerAndRecommendations.split(RECOMMENDATION_MARKER).slice(1);
+    
+    const items = recommendationBlocks.map(block => {
+        const titleMatch = block.match(/\*\*title\*\*\s*:\s*(.*)/);
+        const descMatch = block.match(/\*\*description\*\*\s*:\s*(.*)/);
+        
+        return {
+            title: titleMatch ? titleMatch[1].trim() : "도시 이름 없음",
+            description: descMatch ? descMatch[1].trim() : "설명 없음"
+        };
+    }).filter(item => item.title !== "도시 이름 없음"); // 유효한 데이터만 필터링
+
+    // 3. 최종 안내 텍스트 추출
+    const footerText = `※${footerRaw}`;
+
+    return {
+        summaryText,
+        items,
+        footerText
+    };
 };
 
 export default function ChatbotRecommend() {
@@ -143,12 +173,7 @@ export default function ChatbotRecommend() {
     React.useCallback(() => {
       const parent = navigation?.getParent?.();
       if (!parent) return undefined;
-
-      // 필요 없으면 주석 처리해도 됨
-      // parent.setOptions({
-      //   tabBarStyle: { display: 'none' },
-      // });
-
+    
       return () => {
         parent.setOptions({
           tabBarStyle: undefined,
@@ -195,8 +220,9 @@ export default function ChatbotRecommend() {
 
     setLoading(true);
 
-    let botResponseText =
-      '죄송합니다. 챗봇이 답변을 생성하는 데 실패했습니다. 서버 상태를 확인해주세요. 😟';
+    let botResponseText = "...";
+    let structuredButtonData = null;
+
     let recommendations = [];
 
     try {
@@ -230,7 +256,14 @@ export default function ChatbotRecommend() {
             botResponseText = rawResponse;
           }
         } else {
-          botResponseText = rawResponse;
+          // 1. 응답 텍스트를 파싱하여 구조화된 버튼 데이터를 추출
+           const parsedData = parseFinalButtonResponse(rawResponse);
+
+          // 2. 렌더링에 사용할 필드 저장
+          botResponseText = parsedData.summaryText + '\n\n' + parsedData.footerText;
+          structuredButtonData = parsedData.items; // 버튼 데이터 저장
+                
+          // FINAL 모드 시에는 턴 카운트와 프로필을 초기화
           setCurrentProfile({});
           setTurnCount(0);
         }
@@ -239,16 +272,15 @@ export default function ChatbotRecommend() {
       console.error('챗봇 API 호출 실패:', error);
     } finally {
       const chatbotResponse = {
-        id: messages.length + 1,
-        text: botResponseText,
-        user: 'chatbot',
-        image: CHATBOT_ICON,
-        recommendations:
-          recommendations.length > 0 ? recommendations : null,
-      };
-
-      setMessages((prevMessages) => [...prevMessages, chatbotResponse]);
-      setLoading(false);
+            id: messages.length + 1,
+            text: botResponseText,
+            user: 'chatbot',
+            image: CHATBOT_ICON,
+            recommendations: structuredButtonData,
+        };
+        
+        setMessages(prevMessages => [...prevMessages, chatbotResponse]);
+        setLoading(false);
 
       if (inputRef.current) {
         inputRef.current.focus();
@@ -256,10 +288,76 @@ export default function ChatbotRecommend() {
     }
   };
 
-  const handleDetailPress = (contentid) => {
-    console.log(`상세 보기 요청: ${contentid}`);
-    navigation.navigate('TravelSpotDetail', { contentId: contentid });
-  };
+// -----------------------------------------------------------------
+// 버튼형 추천 카드 컴포넌트
+// -----------------------------------------------------------------
+const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
+
+    const [likedStatus, setLikedStatus] = useState({});
+    const handleLikeToggle = (title) => {
+        setLikedStatus(prev => ({ ...prev, [title]: !prev[title] }));
+        console.log(`'${title}' 좋아요 상태 토글`);
+    };
+
+    return (
+        <View style={cardStyles.cardContainer}>
+            <Text style={cardStyles.summaryText}>{recommendation.summaryText}</Text>
+            
+            {/* ⭐️ 추천 도시 목록 렌더링 ⭐️ */}
+            <View style={buttonCardStyles.recommendationsList}>
+                {recommendation.items.map((item, index) => (
+                    <View key={index} style={buttonCardStyles.itemRow}>
+                        {/* 1. 도시 이름과 아이콘 */}
+                        <View style={buttonCardStyles.itemTextContainer}>
+                            <MaterialCommunityIcons 
+                                name="map-marker" 
+                                size={18} 
+                                color="#2D4C3A" // 위치 아이콘 색상
+                                style={buttonCardStyles.locationIcon}
+                            />
+                            <Text style={buttonCardStyles.itemTitle}>{item.title}</Text>
+                        </View>
+
+                        {/* 2. 찜 버튼과 상세보기 버튼 */}
+                        <View style={buttonCardStyles.actionButtonsContainer}>
+                            {/* 찜 버튼 */}
+                            <TouchableOpacity 
+                                onPress={() => handleLikeToggle(item.title)}
+                                style={buttonCardStyles.likeButton}
+                            >
+                                <MaterialCommunityIcons 
+                                    name={likedStatus[item.title] ? "heart" : "heart-outline"} 
+                                    size={20} 
+                                    color={likedStatus[item.title] ? "#D9534F" : "#777"} // 좋아요 상태에 따른 색상
+                                />
+                            </TouchableOpacity>
+
+                            {/* 상세보기 버튼 */}
+                            <TouchableOpacity 
+                                onPress={() => onDetailPress(item.title)} // 상세보기 페이지로 넘어가기 위한 함수
+                                style={buttonCardStyles.detailButton}
+                            >
+                                <Text style={buttonCardStyles.detailButtonText}>상세 보기</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                ))}
+            </View>
+
+            {/* 푸터 텍스트 */}
+            {recommendation.footerText ? (
+                <Text style={buttonCardStyles.footerText}>
+                    {recommendation.footerText}
+                </Text>
+            ) : null}
+        </View>
+    );
+};
+
+  const handleDetailPress = (cityTitle) => {
+    console.log(`상세 보기 요청: ${cityTitle}`);
+    Alert.alert("도시 선택", `${cityTitle}에 대해 더 자세히 조사합니다.`); 
+};
 
   return (
     // 🔹 top 인셋은 빼고, left/right/bottom만 적용
@@ -315,22 +413,20 @@ export default function ChatbotRecommend() {
                       : styles.messageText
                   }
                 >
+                  {/* QUESTION 모드 메시지 또는 FINAL 모드의 텍스트 응답 */}
                   {message.text}
                 </Text>
 
-                {message.user === 'chatbot' &&
-                  message.recommendations && (
-                    <RecommendationCard
-                      recommendation={{
-                        summaryText:
-                          message.text.split('\n\n')[0]?.trim() ?? '',
-                        items: message.recommendations,
-                        footerText:
-                          message.text.split('\n\n').pop()?.trim() ?? '',
-                      }}
-                      onDetailPress={handleDetailPress}
-                    />
-                  )}
+                {message.user === 'chatbot' && message.recommendations && (
+                <ButtonRecommendationCard 
+                    recommendation={{
+                        summaryText: message.text.split('\n\n')[0].trim(), 
+                        items: message.recommendations, // 이 필드에 버튼 데이터(title, description)가 담김
+                        footerText: message.text.split('\n\n').pop().trim() 
+                    }}
+                    onDetailPress={handleDetailPress}
+                />
+              )}
               </View>
             </View>
           ))}
@@ -406,9 +502,10 @@ const cardStyles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 8,
     color: '#333',
+    lineHeight: 20,
   },
   footerText: {
     marginTop: 8,
@@ -442,6 +539,77 @@ const cardStyles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
   },
+});
+
+const buttonCardStyles = StyleSheet.create({
+    cardContainer: {
+        backgroundColor: '#fff',
+        borderRadius: 10,
+        padding: 15,
+        marginTop: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 1.41,
+        elevation: 2,
+    },
+    summaryText: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 10,
+        lineHeight: 20,
+    },
+    recommendationsList: {
+        marginTop: 5,
+        marginBottom: 10,
+    },
+    itemRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between', // 양쪽 끝으로 정렬
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    itemTextContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1, // 남은 공간을 차지하도록 flex 설정
+    },
+    locationIcon: {
+        marginRight: 8,
+    },
+    itemTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2D4C3A', // 도시 이름 색상
+    },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        // 버튼 간의 간격 조정
+    },
+    likeButton: {
+        padding: 5, // 터치 영역 확보
+        marginRight: 10, // 상세보기 버튼과의 간격
+    },
+    detailButton: {
+        backgroundColor: '#6C757D', // 상세보기 버튼 배경색
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 5,
+    },
+    detailButtonText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: 'bold',
+    },
+    footerText: {
+        fontSize: 12,
+        color: '#777',
+        marginTop: 10,
+        lineHeight: 18,
+    },
 });
 
 const styles = StyleSheet.create({
@@ -524,5 +692,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#6D99FF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cityButton: {
+    backgroundColor: '#F8F8F8', // 배경색
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    alignItems: 'flex-start',
+  },
+  cityButtonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  cityButtonDesc: {
+    fontSize: 13,
+    color: '#666',
   },
 });
