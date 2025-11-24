@@ -13,24 +13,24 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import TopBackBar from '../components/TopBackBar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { sendChatbotMessage } from '../src/config/api_Recommend';
 
+// 상태 관리 스토어 (찜 기능 등)
 import useFavoritesStore from '../screens/stores/favoritesStore';
 import useAuthStore from '../src/stores/authStore';
 
 const CHATBOT_ICON = require('../assets/icons/chatbot.png');
 
 // -----------------------------------------------------------------
-// 개별 추천 아이템 + 찜 버튼 + 상세보기 버튼
+// [컴포넌트] 개별 여행지 카드 (제목 + 설명 + 찜/상세 버튼)
 // -----------------------------------------------------------------
-const ItemRowWithFavorite = ({ item, onDetailPress }) => {
+const TravelCard = ({ item, onDetailPress }) => {
   const isFavorite = useFavoritesStore((state) =>
-    state.isFavorite(item.contentid, 'SPOT'),
+    state.isFavorite(item.contentid, 'SPOT')
   );
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
   const { token } = useAuthStore.getState();
@@ -40,108 +40,63 @@ const ItemRowWithFavorite = ({ item, onDetailPress }) => {
       Alert.alert('로그인 필요', '찜 기능은 로그인 후에 사용 가능합니다.');
       return;
     }
-
     await toggleFavorite(
       {
         contentid: item.contentid,
         title: item.title,
-        image_url: item.firstimage || item.image_url || null,
+        image_url: item.firstimage || null,
+        addr1: item.addr1 || '',
       },
-      'SPOT',
+      'SPOT'
     );
   };
 
   return (
-    <View key={item.contentid} style={cardStyles.itemRow}>
-      <Ionicons
-        name="location-sharp"
-        size={16}
-        color="#6D99FF"
-        style={{ marginRight: 8 }}
-      />
-      <Text style={cardStyles.itemTitle}>{item.title}</Text>
-
-      <TouchableOpacity
-        onPress={handleFavoritePress}
-        style={cardStyles.favoriteButton}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons
-          name={isFavorite ? 'heart' : 'heart-outline'}
-          size={20}
-          color={isFavorite ? '#ff4d6d' : '#999'}
-        />
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={cardStyles.detailButton}
-        onPress={() => onDetailPress(item.contentid)}
-      >
-        <Text style={cardStyles.detailButtonText}>상세 보기</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-// -----------------------------------------------------------------
-// 추천 카드 (요약 + 아이템 리스트 + 푸터 텍스트)
-// -----------------------------------------------------------------
-const RecommendationCard = ({ recommendation, onDetailPress, rawText }) => {
-  return (
-    <View style={cardStyles.cardContainer}>
-      {/* 백엔드에서 파싱된 순수 AI 텍스트를 그대로 표시 */}
-      {!!rawText && (
-        <Text style={cardStyles.summaryText}>
-          {rawText}
+    <View style={cardStyles.card}>
+      {/* 1. 여행지 정보 영역 */}
+      <View style={cardStyles.textContainer}>
+        <View style={cardStyles.titleRow}>
+           <MaterialCommunityIcons name="map-marker-radius" size={18} color="#2D4C3A" style={{marginRight: 4}}/>
+           <Text style={cardStyles.title}>{item.title}</Text>
+        </View>
+        {/* 설명: DB의 주소 정보를 사용하거나, 데이터에 description이 있다면 그것을 사용 */}
+        <Text style={cardStyles.description}>
+            {item.addr1 ? item.addr1 : "대한민국의 아름다운 소도시 여행지입니다."}
         </Text>
-      )}
+      </View>
 
-      {/* DB 추천 아이템 목록만 명확하게 표시 */}
-      {Array.isArray(recommendation.items) &&
-        recommendation.items.map((item, index) => (
-          <ItemRowWithFavorite
-            key={item.contentid || index}
-            item={item}
-            onDetailPress={onDetailPress}
+      {/* 2. 액션 버튼 영역 (하트 + 상세보기) */}
+      <View style={cardStyles.actionRow}>
+        <TouchableOpacity 
+          onPress={handleFavoritePress} 
+          style={cardStyles.iconButton}
+        >
+          <Ionicons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={24}
+            color={isFavorite ? '#FF4D6D' : '#888'}
           />
-        ))}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={cardStyles.detailButton}
+          onPress={() => onDetailPress(item)}
+        >
+          <Text style={cardStyles.detailButtonText}>자세히 보기</Text>
+          <Ionicons name="chevron-forward" size={14} color="#fff" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
-const parseFinalButtonResponse = (rawResponse) => {
-    const RECOMMENDATION_MARKER = "---RECOMMENDATION---";
-    const [headerAndRecommendations, footerRaw] = rawResponse.split('\n※'); 
-    
-    // 1. 요약 텍스트 추출 (첫 번째 마커 이전까지)
-    const summaryText = headerAndRecommendations.split(RECOMMENDATION_MARKER)[0].trim();
-    
-    // 2. 추천 블록 파싱
-    const recommendationBlocks = headerAndRecommendations.split(RECOMMENDATION_MARKER).slice(1);
-    
-    const items = recommendationBlocks.map(block => {
-        const titleMatch = block.match(/\*\*title\*\*\s*:\s*(.*)/);
-        const descMatch = block.match(/\*\*description\*\*\s*:\s*(.*)/);
-        
-        return {
-            title: titleMatch ? titleMatch[1].trim() : "도시 이름 없음",
-            description: descMatch ? descMatch[1].trim() : "설명 없음"
-        };
-    }).filter(item => item.title !== "도시 이름 없음"); // 유효한 데이터만 필터링
-
-    // 3. 최종 안내 텍스트 추출
-    const footerText = `※${footerRaw}`;
-
-    return {
-        summaryText,
-        items,
-        footerText
-    };
-};
-
+// -----------------------------------------------------------------
+// [메인 화면] ChatbotRecommend
+// -----------------------------------------------------------------
 export default function ChatbotRecommend() {
   const navigation = useNavigation();
 
+  // 초기 메시지
   const [messages, setMessages] = useState([
     {
       id: 0,
@@ -150,47 +105,21 @@ export default function ChatbotRecommend() {
       image: CHATBOT_ICON,
     },
   ]);
+  
   const [input, setInput] = useState('');
-  const inputRef = useRef(null);
-  const scrollViewRef = useRef(null);
   const [loading, setLoading] = useState(false);
-
+  
+  // 챗봇 상태 관리 (프로필, 턴 수)
   const [currentProfile, setCurrentProfile] = useState({});
   const [turnCount, setTurnCount] = useState(0);
 
+  const inputRef = useRef(null);
+  const scrollViewRef = useRef(null);
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight?.() ?? 0;
+  const contentBottomPadding = (insets.bottom || 0) + 56 + tabBarHeight + 12;
 
-  // 입력창 자체 높이 (대략)
-  const INPUT_BAR_HEIGHT = 56;
-
-  // 🔹 메시지 리스트 하단 패딩 = 입력창 + 탭바 + 안전영역
-  const contentBottomPadding =
-    (insets.bottom || 0) + INPUT_BAR_HEIGHT + tabBarHeight + 12;
-
-  // 이 화면에 들어왔을 때 탭바 숨기고 싶으면 사용 (현재는 남겨둠)
-  useFocusEffect(
-    React.useCallback(() => {
-      const parent = navigation?.getParent?.();
-      if (!parent) return undefined;
-    
-      return () => {
-        parent.setOptions({
-          tabBarStyle: undefined,
-        });
-      };
-    }, [navigation]),
-  );
-
-  useEffect(() => {
-    if (inputRef.current) {
-      const timer = setTimeout(() => {
-        inputRef.current.focus();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
+  // 자동 스크롤
   useEffect(() => {
     if (scrollViewRef.current) {
       setTimeout(() => {
@@ -199,174 +128,97 @@ export default function ChatbotRecommend() {
     }
   }, [messages]);
 
+  // 상세보기 버튼 클릭 핸들러
+  const handleDetailPress = (item) => {
+    // 여기에 라우팅 로직 추가 예정
+    console.log(`상세보기 클릭: ${item.title} (ID: ${item.contentid})`);
+    Alert.alert("상세보기 준비 중", `${item.title} 페이지로 이동합니다 (구현 예정)`);
+  };
+
+  // 메시지 전송 핸들러
   const handleSend = async () => {
     if (input.trim() === '' || loading) return;
 
     const userMessage = input.trim();
-
+    
+    // 1. 사용자 메시지 추가
     const newMessage = {
       id: messages.length,
       text: userMessage,
       user: 'user',
     };
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    setMessages((prev) => [...prev, newMessage]);
     setInput('');
+    setLoading(true);
 
+    // 2. API 요청 페이로드
     const payload = JSON.stringify({
       message: userMessage,
       current_profile: currentProfile,
       turn_count: turnCount,
     });
 
-    setLoading(true);
-
     let botResponseText = "...";
-    let structuredButtonData = null;
-
-    let recommendations = [];
+    let recommendationsData = []; // 추천 리스트 (DB 데이터)
 
     try {
       const apiResponse = await sendChatbotMessage(payload);
 
-      if (apiResponse && apiResponse.response) {
-        const rawResponse = apiResponse.response;
-        recommendations = apiResponse.recommendations || [];
+      if (apiResponse) {
+        // 백엔드 응답 분해
+        const rawResponse = apiResponse.response || ""; // AI 텍스트
+        recommendationsData = apiResponse.recommendations || []; // DB 리스트
 
-        const profileMarkerStart =
-          rawResponse.indexOf('---PROFILE_UPDATE---');
+        // --- 프로필 업데이트 로직 (중간 질문 단계) ---
+        const profileMarkerStart = rawResponse.indexOf('---PROFILE_UPDATE---');
         const profileMarkerEnd = rawResponse.indexOf('---END_PROFILE---');
 
         if (profileMarkerStart !== -1 && profileMarkerEnd !== -1) {
-          const jsonStart =
-            profileMarkerStart + '---PROFILE_UPDATE---'.length;
-          const jsonEnd = profileMarkerEnd;
-          const jsonString = rawResponse.substring(jsonStart, jsonEnd).trim();
+          // JSON 파싱 (중간 단계)
+          const jsonStart = profileMarkerStart + '---PROFILE_UPDATE---'.length;
+          const jsonString = rawResponse.substring(jsonStart, profileMarkerEnd).trim();
 
           try {
             const parsedData = JSON.parse(jsonString);
-
             setCurrentProfile(parsedData.current_profile || {});
             setTurnCount(parsedData.turn_count || 0);
-
-            botResponseText =
-              parsedData.next_question ||
-              rawResponse.substring(0, profileMarkerStart).trim();
+            
+            // 사용자에게 보여줄 텍스트 (JSON 제외)
+            botResponseText = parsedData.next_question || rawResponse.substring(0, profileMarkerStart).trim();
           } catch (e) {
-            console.error('클라이언트 JSON 파싱 실패:', e);
+            console.error('프로필 파싱 에러:', e);
             botResponseText = rawResponse;
           }
         } else {
-          // 1. 응답 텍스트를 파싱하여 구조화된 버튼 데이터를 추출
-           const parsedData = parseFinalButtonResponse(rawResponse);
-
-          // 2. 렌더링에 사용할 필드 저장
-          botResponseText = parsedData.summaryText + '\n\n' + parsedData.footerText;
-          structuredButtonData = parsedData.items; // 버튼 데이터 저장
-                
-          // FINAL 모드 시에는 턴 카운트와 프로필을 초기화
+          // --- 최종 추천 단계 ---
+          // 텍스트는 그대로 보여주고, 추천 리스트는 별도로 저장
+          botResponseText = rawResponse; 
+          
+          // 최종 단계이므로 프로필 초기화 (선택 사항)
           setCurrentProfile({});
           setTurnCount(0);
         }
       }
     } catch (error) {
-      console.error('챗봇 API 호출 실패:', error);
+      console.error('API 호출 실패:', error);
+      botResponseText = "죄송합니다. 서버 연결에 문제가 발생했습니다.";
     } finally {
+      // 3. 챗봇 응답 메시지 추가
       const chatbotResponse = {
-            id: messages.length + 1,
-            text: botResponseText,
-            user: 'chatbot',
-            image: CHATBOT_ICON,
-            recommendations: structuredButtonData,
-        };
-        
-        setMessages(prevMessages => [...prevMessages, chatbotResponse]);
-        setLoading(false);
+        id: messages.length + 1,
+        text: botResponseText,
+        user: 'chatbot',
+        image: CHATBOT_ICON,
+        recommendations: recommendationsData, // DB에서 받은 구조화된 데이터
+      };
 
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
+      setMessages((prev) => [...prev, chatbotResponse]);
+      setLoading(false);
     }
   };
 
-// -----------------------------------------------------------------
-// 버튼형 추천 카드 컴포넌트
-// -----------------------------------------------------------------
-const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
-
-    const [likedStatus, setLikedStatus] = useState({});
-    const handleLikeToggle = (title) => {
-        setLikedStatus(prev => ({ ...prev, [title]: !prev[title] }));
-        console.log(`'${title}' 좋아요 상태 토글`);
-    };
-
-    return (
-        <View style={cardStyles.cardContainer}>
-            <Text style={cardStyles.summaryText}>{recommendation.summaryText}</Text>
-            
-            {/* ⭐️ 추천 도시 목록 렌더링 ⭐️ */}
-            <View style={buttonCardStyles.recommendationsList}>
-                {recommendation.items.map((item, index) => (
-                    <View key={index} style={buttonCardStyles.itemRow}>
-                        {/* 1. 도시 이름과 아이콘 */}
-                        <View style={buttonCardStyles.itemTextContainer}>
-                            <MaterialCommunityIcons 
-                                name="map-marker" 
-                                size={18} 
-                                color="#2D4C3A" // 위치 아이콘 색상
-                                style={buttonCardStyles.locationIcon}
-                            />
-                            <Text style={buttonCardStyles.itemTitle}>{item.title}</Text>
-                        </View>
-
-                        {/* 2. 찜 버튼과 상세보기 버튼 */}
-                        <View style={buttonCardStyles.actionButtonsContainer}>
-                            {/* 찜 버튼 */}
-                            <TouchableOpacity 
-                                onPress={() => handleLikeToggle(item.title)}
-                                style={buttonCardStyles.likeButton}
-                            >
-                                <MaterialCommunityIcons 
-                                    name={likedStatus[item.title] ? "heart" : "heart-outline"} 
-                                    size={20} 
-                                    color={likedStatus[item.title] ? "#D9534F" : "#777"} // 좋아요 상태에 따른 색상
-                                />
-                            </TouchableOpacity>
-
-                            {/* 상세보기 버튼 */}
-                            <TouchableOpacity 
-                                onPress={() => onDetailPress(item.title)} // 상세보기 페이지로 넘어가기 위한 함수
-                                style={buttonCardStyles.detailButton}
-                            >
-                                <Text style={buttonCardStyles.detailButtonText}>상세 보기</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                ))}
-            </View>
-
-            {/* 푸터 텍스트 */}
-            {recommendation.footerText ? (
-                <Text style={buttonCardStyles.footerText}>
-                    {recommendation.footerText}
-                </Text>
-            ) : null}
-        </View>
-    );
-};
-
-  const handleDetailPress = (cityTitle) => {
-    console.log(`상세 보기 요청: ${cityTitle}`);
-    Alert.alert("도시 선택", `${cityTitle}에 대해 더 자세히 조사합니다.`); 
-};
-
   return (
-    // 🔹 top 인셋은 빼고, left/right/bottom만 적용
-    <SafeAreaView
-      style={styles.page}
-      edges={['left', 'right', 'bottom']}
-    >
-      {/* <TopBackBar title="여행지 추천 (챗봇)" /> */}
-
+    <SafeAreaView style={styles.page} edges={['left', 'right', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -379,11 +231,6 @@ const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
             styles.messageListContent,
             { paddingBottom: contentBottomPadding },
           ]}
-          onContentSizeChange={() => {
-            if (scrollViewRef.current) {
-              scrollViewRef.current.scrollToEnd({ animated: true });
-            }
-          }}
         >
           {messages.map((message, index) => (
             <View
@@ -394,39 +241,45 @@ const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
                   : styles.chatbotMessageRow
               }
             >
-              {message.user === 'chatbot' && message.image && (
+              {message.user === 'chatbot' && (
                 <Image source={message.image} style={styles.profileImage} />
               )}
 
-              <View
-                style={[
-                  styles.messageBubble,
-                  message.user === 'user'
-                    ? styles.userBubble
-                    : styles.chatbotBubble,
-                ]}
-              >
-                <Text
-                  style={
+              <View style={{ maxWidth: '85%' }}>
+                {/* 1. 말풍선 (텍스트) */}
+                <View
+                  style={[
+                    styles.messageBubble,
                     message.user === 'user'
-                      ? styles.userMessageText
-                      : styles.messageText
-                  }
+                      ? styles.userBubble
+                      : styles.chatbotBubble,
+                  ]}
                 >
-                  {/* QUESTION 모드 메시지 또는 FINAL 모드의 텍스트 응답 */}
-                  {message.text}
-                </Text>
+                  <Text
+                    style={
+                      message.user === 'user'
+                        ? styles.userMessageText
+                        : styles.messageText
+                    }
+                  >
+                    {message.text}
+                  </Text>
+                </View>
 
-                {message.user === 'chatbot' && message.recommendations && (
-                <ButtonRecommendationCard 
-                    recommendation={{
-                        summaryText: message.text.split('\n\n')[0].trim(), 
-                        items: message.recommendations, // 이 필드에 버튼 데이터(title, description)가 담김
-                        footerText: message.text.split('\n\n').pop().trim() 
-                    }}
-                    onDetailPress={handleDetailPress}
-                />
-              )}
+                {/* 2. 추천 리스트가 있을 경우 카드 렌더링 (챗봇만) */}
+                {message.user === 'chatbot' && 
+                 message.recommendations && 
+                 message.recommendations.length > 0 && (
+                  <View style={styles.recommendationContainer}>
+                    {message.recommendations.map((item, idx) => (
+                      <TravelCard 
+                        key={item.contentid || idx} 
+                        item={item} 
+                        onDetailPress={handleDetailPress} 
+                      />
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
           ))}
@@ -435,32 +288,20 @@ const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
             <View style={styles.chatbotMessageRow}>
               <Image source={CHATBOT_ICON} style={styles.profileImage} />
               <View style={styles.chatbotBubble}>
-                <Text style={styles.messageText}>
-                  답변을 생성 중입니다...
-                </Text>
+                <Text style={styles.messageText}>열심히 여행지를 찾고 있어요... ✈️</Text>
               </View>
             </View>
           )}
-
-          <View style={{ height: 10 }} />
         </ScrollView>
 
-        {/* 🔹 입력창: 탭바 높이만큼 marginBottom 줘서 가려지지 않게 */}
-        <View
-          style={[
-            styles.inputContainer,
-            {
-              paddingBottom: (insets.bottom || 0) + 4,
-              marginBottom: 40,
-            },
-          ]}
-        >
+        {/* 입력창 */}
+        <View style={[styles.inputContainer, { paddingBottom: (insets.bottom || 0) + 4, marginBottom: 40 }]}>
           <TextInput
             ref={inputRef}
             style={styles.input}
             value={input}
             onChangeText={setInput}
-            placeholder="어떤 여행을 떠나고 싶으신가요?"
+            placeholder="답변을 입력해주세요."
             placeholderTextColor="#999"
             onSubmitEditing={handleSend}
             editable={!loading}
@@ -470,11 +311,7 @@ const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
             onPress={handleSend}
             disabled={loading || input.trim() === ''}
           >
-            {loading ? (
-              <Text style={{ color: '#fff', fontSize: 16 }}>...</Text>
-            ) : (
-              <Ionicons name="send" size={20} color="#fff" />
-            )}
+             <Ionicons name="send" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -483,233 +320,103 @@ const ButtonRecommendationCard = ({ recommendation, onDetailPress }) => {
 }
 
 // -----------------------------------------------------------------
-// 스타일
+// 스타일 정의
 // -----------------------------------------------------------------
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  page: { flex: 1, backgroundColor: '#FFFFFF' },
+  messageList: { flex: 1, paddingHorizontal: 16, paddingTop: 10 },
+  messageListContent: { paddingBottom: 20 },
+  
+  // 메시지 레이아웃
+  chatbotMessageRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
+  userMessageRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 16 },
+  profileImage: { width: 36, height: 36, borderRadius: 18, marginRight: 8, backgroundColor: '#eee' },
+  
+  // 말풍선 스타일
+  messageBubble: { padding: 12, borderRadius: 16, maxWidth: '100%' },
+  chatbotBubble: { backgroundColor: '#F0F2F5', borderTopLeftRadius: 4 },
+  userBubble: { backgroundColor: '#6D99FF', borderTopRightRadius: 4 },
+  
+  messageText: { fontSize: 15, color: '#333', lineHeight: 22 },
+  userMessageText: { fontSize: 15, color: '#fff', lineHeight: 22 },
+  
+  // 추천 카드 컨테이너
+  recommendationContainer: { marginTop: 12 },
+
+  // 입력창 스타일
+  inputContainer: { 
+    flexDirection: 'row', alignItems: 'center', 
+    paddingHorizontal: 16, paddingTop: 10, backgroundColor: '#fff',
+    borderTopWidth: 1, borderTopColor: '#f0f0f0' 
+  },
+  input: { 
+    flex: 1, height: 44, backgroundColor: '#F8F8F8', borderRadius: 22, 
+    paddingHorizontal: 16, marginRight: 10, fontSize: 15, color: '#333' 
+  },
+  sendButton: { 
+    width: 44, height: 44, borderRadius: 22, backgroundColor: '#6D99FF', 
+    alignItems: 'center', justifyContent: 'center' 
+  },
+});
+
+// 카드 전용 스타일
 const cardStyles = StyleSheet.create({
-  cardContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginVertical: 8,
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10, // 카드 간 간격
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    maxWidth: '100%',
+    borderColor: '#EAEAEA',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
-  summaryText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-    color: '#333',
-    lineHeight: 20,
-  },
-  footerText: {
-    marginTop: 8,
-    fontSize: 12,
-    color: '#666',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 4,
-    flexWrap: 'wrap',
-  },
-  itemTitle: {
-    fontSize: 13,
-    color: '#333',
-    flexShrink: 1,
-    marginRight: 8,
-  },
-  favoriteButton: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    marginRight: 4,
-  },
-  detailButton: {
-    backgroundColor: '#6D99FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  detailButtonText: {
-    fontSize: 12,
-    color: '#fff',
-  },
-});
-
-const buttonCardStyles = StyleSheet.create({
-    cardContainer: {
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        padding: 15,
-        marginTop: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 1.41,
-        elevation: 2,
-    },
-    summaryText: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 10,
-        lineHeight: 20,
-    },
-    recommendationsList: {
-        marginTop: 5,
-        marginBottom: 10,
-    },
-    itemRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between', // 양쪽 끝으로 정렬
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    itemTextContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1, // 남은 공간을 차지하도록 flex 설정
-    },
-    locationIcon: {
-        marginRight: 8,
-    },
-    itemTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#2D4C3A', // 도시 이름 색상
-    },
-    actionButtonsContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        // 버튼 간의 간격 조정
-    },
-    likeButton: {
-        padding: 5, // 터치 영역 확보
-        marginRight: 10, // 상세보기 버튼과의 간격
-    },
-    detailButton: {
-        backgroundColor: '#6C757D', // 상세보기 버튼 배경색
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 5,
-    },
-    detailButtonText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: 'bold',
-    },
-    footerText: {
-        fontSize: 12,
-        color: '#777',
-        marginTop: 10,
-        lineHeight: 18,
-    },
-});
-
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  page: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  messageList: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 8, // 첫 메시지 위 여백 최소화
-  },
-  messageListContent: {
-    paddingBottom: 16,
-  },
-  chatbotMessageRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  textContainer: {
     marginBottom: 12,
   },
-  userMessageRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginBottom: 12,
-  },
-  profileImage: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 8,
-    backgroundColor: '#eee',
-  },
-  chatbotBubble: {
-    backgroundColor: '#F3F3F3',
-    padding: 10,
-    borderRadius: 15,
-    borderTopLeftRadius: 0,
-  },
-  userBubble: {
-    backgroundColor: '#6D99FF',
-    padding: 10,
-    borderRadius: 15,
-    borderTopRightRadius: 0,
-    maxWidth: '80%',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-  },
-  messageText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  userMessageText: {
-    fontSize: 15,
-    color: '#fff',
-  },
-  inputContainer: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    backgroundColor: '#FFFFFF',
-  },
-  input: {
-    flex: 1,
-    height: 40,
-    backgroundColor: '#F8F8F8',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    marginRight: 8,
-    fontSize: 15,
-  },
-  sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#6D99FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cityButton: {
-    backgroundColor: '#F8F8F8', // 배경색
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    alignItems: 'flex-start',
-  },
-  cityButtonTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
     marginBottom: 4,
   },
-  cityButtonDesc: {
+  title: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  description: {
     fontSize: 13,
     color: '#666',
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  iconButton: {
+    padding: 4,
+  },
+  detailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6D99FF',
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+  },
+  detailButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 4,
   },
 });
