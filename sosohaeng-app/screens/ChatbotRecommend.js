@@ -57,15 +57,21 @@ const TravelCard = ({ item, onDetailPress }) => {
       <View style={cardStyles.textContainer}>
         <View style={cardStyles.titleRow}>
            <MaterialCommunityIcons name="map-marker-radius" size={18} color="#2D4C3A" style={{marginRight: 4}}/>
+           {/* [타이틀] 볼드체 유지 */}
            <Text style={cardStyles.title}>{item.title}</Text>
         </View>
-        {/* 설명: DB의 주소 정보를 사용하거나, 데이터에 description이 있다면 그것을 사용 */}
-        <Text style={cardStyles.description}>
-            {item.addr1 ? item.addr1 : "대한민국의 아름다운 소도시 여행지입니다."}
+        
+        {/* [핵심 수정] 주소 대신 AI가 생성한 'ai_summary' 사용 */}
+        {/* 만약 ai_summary가 없으면 addr1(주소)을 보여줌 */}
+        <Text style={cardStyles.aiDescription}>
+            {item.ai_summary ? item.ai_summary : item.addr1}
         </Text>
+        
+        {/* (선택) 주소도 작게 보여주고 싶다면 아래 주석 해제 */}
+        {/* <Text style={cardStyles.addressText}>{item.addr1}</Text> */}
       </View>
 
-      {/* 2. 액션 버튼 영역 (하트 + 상세보기) */}
+      {/* 2. 액션 버튼 영역 (기존 동일) */}
       <View style={cardStyles.actionRow}>
         <TouchableOpacity 
           onPress={handleFavoritePress} 
@@ -388,11 +394,16 @@ const cardStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  description: {
-    fontSize: 13,
-    color: '#666',
-    lineHeight: 18,
-    marginTop: 2,
+  aiDescription: {
+    fontSize: 14,       // 본문 크기
+    color: '#555',      // 약간 진한 회색
+    lineHeight: 20,     // 줄간격 (가독성)
+    letterSpacing: -0.5,
+  },
+  addressText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
   },
   actionRow: {
     flexDirection: 'row',

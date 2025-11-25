@@ -10,6 +10,19 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 60000,
 });
+
+export const sendChatbotMessage = async (payload) => {
+  try {
+    const response = await apiClient.post('/recommend/chatbot', payload, {
+        timeout: 60000 // 여기에도 명시적으로 60초 설정
+    });
+    return response.data;
+  } catch (error) {
+    console.error("챗봇 메시지 전송 실패:", error);
+    throw error;
+  }
+};
 
 export default apiClient;
