@@ -1,1 +1,1 @@
-export { default } from "../../../screens/ChatbotRecommend";
+export { default } from "../../../screens/RecommendScreen/ChatbotRecommend";

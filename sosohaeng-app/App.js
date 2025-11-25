@@ -10,7 +10,9 @@ import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-cont
 
 // Screens
 import HomeScreen from './screens/HomeScreen';
-import ChatbotRecommend from './screens/ChatbotRecommend'; 
+import ChatbotRecommend from './screens/RecommendScreen/ChatbotRecommend'; 
+import NearbySpotsScreen from './screens/NearbySpotsScreen';
+import SpotDetailScreen from './screens/SpotDetailScreen';
 import MarketScreen from './screens/MarketScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import FavoritesScreen from './screens/FavoritesScreen';
@@ -164,7 +166,20 @@ export default function App() {
           <Stack.Screen name="Main" component={MainTabsWithFab} />
           <Stack.Screen name="찜" component={FavoritesScreen} />
           {/* 축제 detailScreen 추가 */}
-          <Stack.Screen name="FestivalDetailScreen" component={FestivalDetailScreen} /> 
+          <Stack.Screen name="FestivalDetailScreen" component={FestivalDetailScreen} />
+          {/* ▼▼▼ [추가] 추천 관련 화면 등록 ▼▼▼ */}
+          {/* 1. 주변 20km 리스트 화면 */}
+          <Stack.Screen 
+            name="NearbySpotsScreen" 
+            component={NearbySpotsScreen}
+            options={{ headerShown: true, title: '주변 추천 여행지' }} // 헤더 보이게 설정
+          />
+          {/* 2. 최종 상세 정보 화면 */}
+          <Stack.Screen 
+            name="SpotDetailScreen" 
+            component={SpotDetailScreen} 
+            options={{ headerShown: true, title: '여행지 상세' }} 
+          /> 
         </Stack.Navigator>
       </NavigationContainer>
       </GestureHandlerRootView>

@@ -24,7 +24,7 @@ const FavoriteItemCard = ({ item }) => {
                 navigation.navigate('ProductDetailScreen', { id: itemId }); 
                 break;
             case 'SPOT':
-                navigation.navigate('RecommendResult', { itemId: itemId }); 
+                navigation.navigate('SpotDetailScreen', { contentid: itemId }); 
                 break;
             default:
                 console.warn('알 수 없는 찜 항목 타입:', item.item_type);
@@ -43,6 +43,12 @@ const FavoriteItemCard = ({ item }) => {
                     {item.item_type === 'FESTIVAL' ? ' 축제' : item.item_type === 'PRODUCT' ? ' 상품' : ' 여행지'}
                 </Text>
             </View>
+            {item.item_type === 'SPOT' && (
+                <TouchableOpacity style={styles.detailButton} onPress={navigateToDetail}>
+                    <Text style={styles.detailButtonText}>자세히 보기</Text>
+                    <Ionicons name="chevron-forward" size={12} color="#fff" />
+                </TouchableOpacity>
+            )}
         </TouchableOpacity>
     );
 };
@@ -160,4 +166,18 @@ const styles = StyleSheet.create({
     thumb: { width: 44, height: 44, borderRadius: 8, resizeMode: 'cover' },
     itemName: { fontSize: 15, fontWeight: '700' },
     itemMeta: { color: '#666', marginTop: 2 },
+    detailButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#6D99FF',
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 15,
+    },
+    detailButtonText: {
+        color: '#FFFFFF',
+        fontSize: 11,
+        fontWeight: '600',
+        marginRight: 2,
+    },
 });

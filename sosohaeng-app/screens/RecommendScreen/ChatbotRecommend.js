@@ -17,13 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { sendChatbotMessage } from '../src/config/api_Recommend';
+import { sendChatbotMessage } from '../../src/config/api_Recommend';
+import { useRouter } from 'expo-router';
 
 // 상태 관리 스토어 (찜 기능 등)
-import useFavoritesStore from '../screens/stores/favoritesStore';
-import useAuthStore from '../src/stores/authStore';
+import useFavoritesStore from '../stores/favoritesStore';
+import useAuthStore from '../../src/stores/authStore';
 
-const CHATBOT_ICON = require('../assets/icons/chatbot.png');
+const CHATBOT_ICON = require('../../assets/icons/chatbot.png');
 
 // -----------------------------------------------------------------
 // [컴포넌트] 개별 여행지 카드 (제목 + 설명 + 찜/상세 버튼)
@@ -100,7 +101,7 @@ const TravelCard = ({ item, onDetailPress }) => {
 // [메인 화면] ChatbotRecommend
 // -----------------------------------------------------------------
 export default function ChatbotRecommend() {
-  const navigation = useNavigation();
+  const router = useRouter();
 
   // 초기 메시지
   const [messages, setMessages] = useState([
@@ -136,9 +137,10 @@ export default function ChatbotRecommend() {
 
   // 상세보기 버튼 클릭 핸들러
   const handleDetailPress = (item) => {
-    // 여기에 라우팅 로직 추가 예정
-    console.log(`상세보기 클릭: ${item.title} (ID: ${item.contentid})`);
-    Alert.alert("상세보기 준비 중", `${item.title} 페이지로 이동합니다 (구현 예정)`);
+    router.push({
+        pathname: `/recommend/nearby/${item.contentid}`,
+        params: { title: item.title }
+    });
   };
 
   // 메시지 전송 핸들러

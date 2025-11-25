@@ -10,14 +10,3 @@ export const sendChatbotMessage = async (message) => {
     throw error;
   }
 };
-
-// POST /random_recommendations 엔드포인트에 테마를 보내는 함수
-export const getRandomRecommendations = async (themes) => {
-  try {
-    const response = await apiClient.post('/random_recommendations', { themes });
-    return response.data;
-  } catch (error) {
-    console.error('랜덤 추천 요청 실패:', error);
-    throw error;
-  }
-};
