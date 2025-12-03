@@ -2,7 +2,7 @@
 import apiClient from './client';
 
 // 1. 여기에 1단계에서 찾은 본인 Mac의 Wi-Fi IP 주소를 입력하세요.
-const MY_MAC_IP = '192.168.45.154'; 
+const MY_MAC_IP = '?????????'; 
 
 // 2. BE 서버 주소를 '/api/v1' 없이 루트로 설정합니다.
 let base = `http://${MY_MAC_IP}:8000`;
