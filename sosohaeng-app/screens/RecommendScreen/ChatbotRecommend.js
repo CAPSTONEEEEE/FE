@@ -62,14 +62,14 @@ const TravelCard = ({ item, onDetailPress }) => {
            <Text style={cardStyles.title}>{item.title}</Text>
         </View>
         
-        {/* [핵심 수정] 주소 대신 AI가 생성한 'ai_summary' 사용 */}
+        {/* 주소 대신 AI가 생성한 'ai_summary' 사용 */}
         {/* 만약 ai_summary가 없으면 addr1(주소)을 보여줌 */}
         <Text style={cardStyles.aiDescription}>
             {item.ai_summary ? item.ai_summary : item.addr1}
         </Text>
         
-        {/* (선택) 주소도 작게 보여주고 싶다면 아래 주석 해제 */}
-        {/* <Text style={cardStyles.addressText}>{item.addr1}</Text> */}
+        {/* 주소도 작게 보여줌 */}
+        <Text style={cardStyles.addressText}>{item.addr1}</Text>
       </View>
 
       {/* 2. 액션 버튼 영역 (기존 동일) */}
@@ -137,9 +137,19 @@ export default function ChatbotRecommend() {
 
   // 상세보기 버튼 클릭 핸들러
   const handleDetailPress = (item) => {
+    if (!item.contentid) {
+      Alert.alert("오류", "여행지 ID 정보가 없습니다.");
+      return;
+    }
+
+    console.log("Navigating to detail with ID:", item.contentid);
+
     router.push({
         pathname: `/recommend/nearby/${item.contentid}`,
-        params: { title: item.title }
+        params: { 
+          contentid: item.contentid,
+          title: item.title 
+        }
     });
   };
 

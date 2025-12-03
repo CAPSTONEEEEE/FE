@@ -8,20 +8,25 @@ import apiClient from '../src/config/client'; // 기존에 쓰시던 axios clien
 export default function NearbySpotsScreen() {
     const navigation = useNavigation();
     const route = useRoute();
-    const { contentid, title } = route.params; // ChatbotRecommend에서 넘겨준 값
+
+    const { contentid, title } = route.params || {};
 
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState({ target: null, nearby_spots: [] });
 
     useEffect(() => {
-        // 헤더 제목 설정
         navigation.setOptions({ title: title || '주변 관광지' });
-        fetchNearbySpots();
+        if (contentid) {
+            fetchNearbySpots();
+        } else {
+            console.error("contentid가 전달되지 않았습니다.");
+            setLoading(false);
+        }
     }, [contentid]);
 
     const fetchNearbySpots = async () => {
         try {
-            // 백엔드 API 호출 (/api/v1/recommend/nearby/{contentid})
+            console.log(`Requesting: /recommend/nearby/${contentid}`);
             const res = await apiClient.get(`/recommend/nearby/${contentid}`);
             setData(res.data);
         } catch (error) {
