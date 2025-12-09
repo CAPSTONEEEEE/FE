@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { API_BASE_URL } from './api';
 
-const FINAL_BASE_URL = 'http://{현재네트워크IP주소}:8000/api/v1'; 
+//const FINAL_BASE_URL = 'http://{본인IP주소}:8000/api/v1';
+const FINAL_BASE_URL = 'https://sosohaeng-server.onrender.com/api/v1';
+
 
 
 // Axios 인스턴스 생성
