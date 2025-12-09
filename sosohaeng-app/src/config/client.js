@@ -5,6 +5,7 @@ import { API_BASE_URL } from './api';
 const FINAL_BASE_URL = 'https://sosohaeng-server.onrender.com/api/v1';
 
 
+
 // Axios 인스턴스 생성
 const apiClient = axios.create({
   baseURL: FINAL_BASE_URL,
