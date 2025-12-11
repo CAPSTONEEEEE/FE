@@ -18,10 +18,16 @@ const FavoriteItemCard = ({ item }) => {
         const itemId = item.item_id;
         switch (item.item_type) {
             case 'FESTIVAL':
-                navigation.navigate('FestivalDetailScreen', { id: itemId }); 
-                break;
+                router.push({
+                pathname: `/festivals/${itemId}`,
+                params: { id: itemId } 
+            });
+            break;
             case 'PRODUCT':
-                navigation.navigate('ProductDetailScreen', { id: itemId }); 
+                router.push({
+                pathname: `/market/product/${itemId}`,
+                params: { id: itemId }
+                });
                 break;
             case 'SPOT':
                 navigation.navigate('RecommendResult', { itemId: itemId }); 

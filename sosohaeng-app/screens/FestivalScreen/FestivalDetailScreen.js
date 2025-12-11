@@ -24,18 +24,23 @@ const formatDate = (dateStr) => {
   return `${dateStr.substring(0, 4)}년 ${dateStr.substring(4, 6)}월 ${dateStr.substring(6, 8)}일`;
 };
 
-/**
- * 목록 화면에서 전달받은 prop을 사용하여 상세 정보를 표시합니다.
- * @param {object} props
- * @param {object} props.festival - 목록 화면에서 전달받은 축제 상세 객체
- * @param {string} props.distance - 목록 화면에서 포맷팅되어 전달된 거리 문자열
- */
-export default function FestivalDetailScreen({ festival, distance }) {
-  // isFavorite 함수 호출 시 itemType 명시 (FESTIVAL)
+export default function FestivalDetailScreen({ route, navigation, festival: propFestival }) {
+  // 1. FavoritesScreen에서 넘겨준 id 받기
+  const { id } = route?.params || {};
+
+  // 2. 찜 스토어(데이터 저장소)에서 해당 id를 가진 축제 정보 찾기
+  const storeFestival = useFavoritesStore(state => 
+    state.festivals.find(f => (f.contentid || f.id) == id)
+  );
+
+  // 3. 사용할 데이터 결정
+  const festival = propFestival || storeFestival;
+
+  // 4. 찜 상태 확인 및 토글 함수
   const isFavorite = useFavoritesStore((state) => state.isFavorite(festival?.contentid || festival?.id, 'FESTIVAL'));
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
-
+  // 데이터가 없을 때 처리
   if (!festival) {
     return (
       <View style={styles.center}>
@@ -43,6 +48,7 @@ export default function FestivalDetailScreen({ festival, distance }) {
       </View>
     );
   }
+
   const festivalDistance = festival.distance;
   const formattedDistance = formatDistance(festivalDistance);
   const handleFavoritePress = async () => {

@@ -8,32 +8,51 @@ import { useRouter } from 'expo-router';
 const HERO_SRC = require('../assets/icons/sosohaeng_logo2.png'); // 소소행 로고
 
 // 기능별 카드를 위한 컴포넌트
-const FeatureCard = ({ iconName, title, description, color }) => (
-  <View style={cardStyles.cardContainer}>
+const FeatureCard = ({ iconName, title, description, color, onPress }) => (
+  <TouchableOpacity 
+    style={[cardStyles.cardContainer, { borderLeftColor: color }]} // 색상 동적 적용
+    onPress={onPress}
+    activeOpacity={0.7}
+  >
     <Ionicons name={iconName} size={20} color={color} style={{ marginRight: 10 }} />
     <View style={cardStyles.textContainer}>
       <Text style={[cardStyles.title, { color: color }]}>{title}</Text>
       <Text style={cardStyles.description}>{description}</Text>
     </View>
     <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
-  </View>
+  </TouchableOpacity>
 );
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter(); 
 
-  const userName = "여행가 소소행";
+  const [nickname, setNickname] = useState("여행가 소소행"); 
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        // 예: const storedName = await AsyncStorage.getItem('userNickname');
+        // if (storedName) setNickname(storedName);
+        
+        // setNickname("소소행 러버"); 
+      } catch (e) {
+        console.error("사용자 정보 로드 실패", e);
+      }
+    };
+    fetchUserInfo();
+  }, []);
   
-  const handleGoToFavorites = () => {
-    router.push('/(tabs)/favorites'); 
-  };
-  
+  const handleGoToFavorites = () => router.push('/(tabs)/favorites');
+  const handleGoToChatbot = () => router.push('/chatbot');
+  const handleGoToFestivals = () => router.push('/(tabs)/festivals');
+  const handleGoToMarket = () => router.push('/(tabs)/market');
+
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor="#E8F6F8" />
       
-      {/* === 0. 찜 버튼 (절대 위치로 상단 오른쪽 고정) === */}
+      {/* 찜 버튼 */}
       <TouchableOpacity
         style={[styles.favoritesButton, { top: insets.top + 5 }]} 
         onPress={handleGoToFavorites} 
@@ -41,7 +60,6 @@ export default function HomeScreen() {
       >
         <Ionicons name="heart-outline" size={24} color="#ff4d6d" />
       </TouchableOpacity>
-      {/* ============================================== */}
 
       <ScrollView
         style={{ flex: 1 }}
@@ -51,25 +69,31 @@ export default function HomeScreen() {
           paddingBottom: 120, 
         }}
       >
-        {/* === 1. 사용자 환영/정보 섹션 (페이지처럼 보이도록) === */}
+        {/* 사용자 환영 섹션 */}
         <View style={styles.userHeader}>
-          <Text style={styles.welcomeText}>안녕하세요, <Text style={{fontWeight: '900', color: '#0F172A'}}>{userName}님!</Text> 👋</Text>
+          <Text style={styles.welcomeText}>
+            안녕하세요, <Text style={{fontWeight: '900', color: '#0F172A'}}>{nickname}님!</Text> 👋
+          </Text>
         </View>
 
-        {/* === 2. 이미지 섹션 및 핵심 액션 === */}
+        {/* 히어로 이미지 */}
         <View style={styles.heroWrap}>
           <Image source={HERO_SRC} style={styles.heroImage} />
         </View>
         
+        {/* 액션 섹션 (맞춤 추천) */}
         <View style={styles.actionSection}>
            <Text style={styles.actionTitle}>오늘의 소소행 추천</Text>
-           <TouchableOpacity style={styles.actionButton}>
+           <TouchableOpacity 
+             style={styles.actionButton}
+             onPress={handleGoToChatbot}
+           >
               <Text style={styles.actionButtonText}>맞춤 추천 시작하기</Text>
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
            </TouchableOpacity>
         </View>
 
-        {/* === 3. 주요 기능 리스트  === */}
+        {/* 주요 기능 리스트 */}
         <Text style={styles.mainTitle}>소소행 핵심 서비스</Text>
 
         <FeatureCard 
@@ -77,6 +101,7 @@ export default function HomeScreen() {
           title="AI 여행지 추천"
           description="취향에 맞는 소도시의 숨은 명소를 AI가 똑똑하게 찾아줘요."
           color="#6D99FF"
+          onPress={handleGoToChatbot}
         />
 
         <FeatureCard 
@@ -84,6 +109,7 @@ export default function HomeScreen() {
           title="로컬 축제 정보"
           description="가까운 축제·행사 소식과 일정을 최신 정보로 한눈에 확인하세요."
           color="#FF6347"
+          onPress={handleGoToFestivals}
         />
 
         <FeatureCard 
@@ -91,6 +117,7 @@ export default function HomeScreen() {
           title="지역 마켓/특산물"
           description="지역 상인의 특산품을 모아보고, 판매자와 바로 연결해 구매해요."
           color="#00A896"
+          onPress={handleGoToMarket}
         />
         
       </ScrollView>
