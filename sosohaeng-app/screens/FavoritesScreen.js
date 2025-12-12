@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import TopBackBar from '../components/TopBackBar'; 
 import useFavoritesStore from './stores/favoritesStore';
 import Header from '../components/Header'; 
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const PLACEHOLDER_URL = 'https://placehold.co/100x100/eeeeee/cccccc?text=NO+IMG';
@@ -14,6 +15,7 @@ const PLACEHOLDER_URL = 'https://placehold.co/100x100/eeeeee/cccccc?text=NO+IMG'
 // 찜 항목을 보여주는 작은 카드 컴포넌트
 const FavoriteItemCard = ({ item }) => {
     const navigation = useNavigation();
+    const router = useRouter();
     const navigateToDetail = () => {
         const itemId = item.item_id;
         switch (item.item_type) {
@@ -24,7 +26,10 @@ const FavoriteItemCard = ({ item }) => {
                 navigation.navigate('ProductDetailScreen', { id: itemId }); 
                 break;
             case 'SPOT':
-                navigation.navigate('SpotDetailScreen', { contentid: itemId }); 
+                router.push({
+                    pathname: `/recommend/nearby/${itemId}`, // 파일 경로: app/recommend/nearby/[contentid].jsx
+                    params: { title: item.title }            // 제목도 같이 전달
+                });
                 break;
             default:
                 console.warn('알 수 없는 찜 항목 타입:', item.item_type);
