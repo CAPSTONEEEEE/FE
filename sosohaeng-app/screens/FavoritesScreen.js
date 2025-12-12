@@ -23,7 +23,10 @@ const FavoriteItemCard = ({ item }) => {
                 navigation.navigate('FestivalDetailScreen', { id: itemId }); 
                 break;
             case 'PRODUCT':
-                navigation.navigate('ProductDetailScreen', { id: itemId }); 
+                router.push({
+                    pathname: '/market/product/[id]',
+                    params: { id: String(itemId) },
+                });
                 break;
             case 'SPOT':
                 router.push({
