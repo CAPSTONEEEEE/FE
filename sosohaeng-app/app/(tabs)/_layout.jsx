@@ -1,8 +1,10 @@
 // app/(tabs)/_layout.jsx
 import { Tabs } from "expo-router";
 import CustomTabBar from "../../components/CustomTabBar";
+import { useRouter } from "expo-router";
 
 export default function TabsLayout() {
+  const router = useRouter();
   return (
     <Tabs
       screenOptions={{

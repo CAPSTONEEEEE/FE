@@ -3,7 +3,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Dimensions, TouchableOpacity, Image, Platform, StatusBar} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 import TopBackBar from '../components/TopBackBar'; 
 import useFavoritesStore from './stores/favoritesStore';
 import Header from '../components/Header'; 
@@ -14,20 +13,34 @@ const PLACEHOLDER_URL = 'https://placehold.co/100x100/eeeeee/cccccc?text=NO+IMG'
 
 // 찜 항목을 보여주는 작은 카드 컴포넌트
 const FavoriteItemCard = ({ item }) => {
-    const navigation = useNavigation();
     const router = useRouter();
     const navigateToDetail = () => {
-        const itemId = item.item_id;
+        // ID 안전하게 추출
+        const itemId = item.item_id || item.contentid || item.id;
+        if (!itemId) return;
+
         switch (item.item_type) {
             case 'FESTIVAL':
-                navigation.navigate('FestivalDetailScreen', { id: itemId }); 
+                const festivalData = JSON.stringify({
+                    festival: item, // store에 저장된 item 전체를 넘김
+                    distance: null 
+                });
+                
+                router.push({
+                    pathname: `/festivals/${itemId}`,
+                    params: { 
+                        data: festivalData 
+                    } 
+                });
                 break;
+
             case 'PRODUCT':
                 router.push({
                     pathname: '/market/product/[id]',
                     params: { id: String(itemId) },
                 });
                 break;
+                
             case 'SPOT':
                 router.push({
                     pathname: `/recommend/nearby/${itemId}`, // 파일 경로: app/recommend/nearby/[contentid].jsx
@@ -43,20 +56,25 @@ const FavoriteItemCard = ({ item }) => {
 
     return (
         <TouchableOpacity style={styles.itemRow} onPress={navigateToDetail}>
-            <Image source={{ uri: imageUrl }} style={styles.thumb} defaultSource={{ uri: PLACEHOLDER_URL }} />
+            <Image 
+                source={{ uri: imageUrl }} 
+                style={styles.thumb} 
+                defaultSource={{ uri: PLACEHOLDER_URL }} 
+            />
             <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={1}>{item.title ?? '제목 없음'}</Text>
                 <Text style={styles.itemMeta}>
                     <Ionicons name="bookmark" size={12} color="#666" /> 
                     {item.item_type === 'FESTIVAL' ? ' 축제' : item.item_type === 'PRODUCT' ? ' 상품' : ' 여행지'}
                 </Text>
+                {/* 디버깅용: 주소가 잘 저장되어 있는지 살짝 보여줌 */}
+                {/* <Text style={{fontSize:10, color:'#999'}}>{item.location || '주소없음'}</Text> */}
             </View>
-            {item.item_type === 'SPOT' && (
-                <TouchableOpacity style={styles.detailButton} onPress={navigateToDetail}>
-                    <Text style={styles.detailButtonText}>자세히 보기</Text>
-                    <Ionicons name="chevron-forward" size={12} color="#fff" />
-                </TouchableOpacity>
-            )}
+            
+            <TouchableOpacity style={styles.detailButton} onPress={navigateToDetail}>
+                <Text style={styles.detailButtonText}>자세히 보기</Text>
+                <Ionicons name="chevron-forward" size={12} color="#fff" />
+            </TouchableOpacity>
         </TouchableOpacity>
     );
 };
