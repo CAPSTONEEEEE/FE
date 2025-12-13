@@ -11,6 +11,7 @@ export default function MarketLayout() {
     >
       <Stack.Screen name="index" options={{ title: "마켓" }} />
       <Stack.Screen name="wishlist" options={{ title: "위시리스트" }} />
+      <Stack.Screen name="favorites" options={{ title: "찜 목록" }} />
       <Stack.Screen name="product/[id]" options={{ title: "상품 상세" }} />
       <Stack.Screen name="product/new" options={{ title: "상품 등록하기" }} />
     </Stack>

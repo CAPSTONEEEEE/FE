@@ -14,7 +14,6 @@ const PLACEHOLDER_URL = 'https://placehold.co/100x100/eeeeee/cccccc?text=NO+IMG'
 // 찜 항목을 보여주는 작은 카드 컴포넌트
 const FavoriteItemCard = ({ item }) => {
     const router = useRouter();
-
     const navigateToDetail = () => {
         // ID 안전하게 추출
         const itemId = item.item_id || item.contentid || item.id;
@@ -37,14 +36,19 @@ const FavoriteItemCard = ({ item }) => {
 
             case 'PRODUCT':
                 router.push({
-                    pathname: `/market/product/${targetId}`,
-                    params: { id: targetId }
+                    pathname: '/market/product/[id]',
+                    params: { id: String(itemId) },
                 });
                 break;
                 
             case 'SPOT':
-                 console.log("여행지 이동 구현 필요");
-                 break;
+                router.push({
+                    pathname: `/recommend/nearby/${itemId}`, // 파일 경로: app/recommend/nearby/[contentid].jsx
+                    params: { title: item.title }            // 제목도 같이 전달
+                });
+                break;
+            default:
+                console.warn('알 수 없는 찜 항목 타입:', item.item_type);
         }
     };
     
