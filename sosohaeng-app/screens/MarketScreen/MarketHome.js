@@ -157,7 +157,7 @@ export default function MarketHome() {
   if (loading && !items.length) {
     return (
       <SafeAreaView style={styles.root}>
-        <Header onBack={() => router.back()} onWishlist={() => router.push('/market/favorites')} />
+        <Header onBack={() => router.back()} onWishlist={() => router.push('/favorites')} />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator />
         </View>
@@ -188,7 +188,7 @@ export default function MarketHome() {
 
   return (
     <View style={styles.root}>
-      <Header onBack={() => router.back()} onWishlist={() => router.push('/market/favorites')} />
+      <Header onBack={() => router.back()} onWishlist={() => router.push('/favorites')} />
       <View style={styles.searchRow}>
         <Ionicons name="search" size={18} color="#8aa0ad" />
         <TextInput
