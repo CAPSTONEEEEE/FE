@@ -2,10 +2,11 @@
 import apiClient from './client';
 
 // 1. 여기에 1단계에서 찾은 본인 Mac의 Wi-Fi IP 주소를 입력하세요.
-const MY_MAC_IP = '10.240.184.5'; 
+const MY_MAC_IP = '{MY_MAC_IP}'; 
 
 // 2. BE 서버 주소를 '/api/v1' 없이 루트로 설정합니다.
-let base = `http://${MY_MAC_IP}:8000`;
+//let base = `http://${MY_MAC_IP}:8000`;
+let base = 'https://sosohaeng-server.onrender.com';
 
 // 3. API_BASE_URL은 /api/v1을 포함한 주소로 만듭니다.
 // (다른 코드들이 API_BASE_URL을 사용할 수 있으므로 유지)

@@ -12,7 +12,7 @@ export default function FestivalStackLayout() {
           title: '축제',
           // 찜 버튼을 헤더 오른쪽에 추가
           headerRight: () => (
-            <TouchableOpacity onPress={() => router.push('/favorites')}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/favorites')}>
               <Ionicons name="heart-outline" size={24} color="#ff4d6d" style={{ marginRight: 15 }} />
             </TouchableOpacity>
           ),

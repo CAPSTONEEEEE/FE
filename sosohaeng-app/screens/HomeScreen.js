@@ -1,5 +1,5 @@
 // screens/HomeScreen.js 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,7 +10,7 @@ const HERO_SRC = require('../assets/icons/sosohaeng_logo2.png'); // 소소행 �
 // 기능별 카드를 위한 컴포넌트
 const FeatureCard = ({ iconName, title, description, color, onPress }) => (
   <TouchableOpacity 
-    style={[cardStyles.cardContainer, { borderLeftColor: color }]} // 색상 동적 적용
+    style={[cardStyles.cardContainer, { borderLeftColor: color }]} 
     onPress={onPress}
     activeOpacity={0.7}
   >
@@ -32,10 +32,9 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        // 예: const storedName = await AsyncStorage.getItem('userNickname');
+        // 나중에 실제 닉네임 로드 로직 추가
+        // const storedName = await AsyncStorage.getItem('userNickname');
         // if (storedName) setNickname(storedName);
-        
-        // setNickname("소소행 러버"); 
       } catch (e) {
         console.error("사용자 정보 로드 실패", e);
       }
@@ -43,11 +42,12 @@ export default function HomeScreen() {
     fetchUserInfo();
   }, []);
   
+  // 네비게이션 이동 함수들
   const handleGoToFavorites = () => router.push('/(tabs)/favorites');
-  const handleGoToChatbot = () => router.push('/chatbot');
+  const handleGoToChatbot = () => router.push('/(tabs)/recommend'); 
   const handleGoToFestivals = () => router.push('/(tabs)/festivals');
   const handleGoToMarket = () => router.push('/(tabs)/market');
-
+  
   return (
     <View style={styles.root}>
       <StatusBar barStyle="dark-content" backgroundColor="#E8F6F8" />
@@ -131,9 +131,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#D5EDEF', // 홈 배경색
+    backgroundColor: '#D5EDEF', 
   },
-  favoritesButton: { // 찜 버튼 스타일
+  favoritesButton: { 
     position: 'absolute',
     right: 20,
     zIndex: 10, 
@@ -150,16 +150,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#475569',
     flex: 1,
-  },
-  userStats: {
-    position: 'absolute',
-    top: 25,
-    left: 0,
-    fontSize: 12,
-    color: '#64748B',
-  },
-  profileButton: {
-    padding: 5,
   },
   heroWrap: {
     marginTop: 10,
@@ -224,7 +214,7 @@ const cardStyles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'center',
     borderLeftWidth: 5,
-    borderLeftColor: '#00A896',
+    borderLeftColor: '#eee', // 기본값
   },
   textContainer: {
     flex: 1,

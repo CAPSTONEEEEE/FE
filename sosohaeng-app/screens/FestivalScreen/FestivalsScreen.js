@@ -8,6 +8,10 @@ import apiClient from '../../src/config/client';
 import { useRouter } from 'expo-router';
 import { formatDistance } from '../../src/utils/distanceHelper';
 
+const getFestivalId = (item) => {
+  return item.contentid || item.id || item.item_id;
+};
+
 const fetchFestivals = async (queryContext) => {
   const { location, showNearby, orderBy } = queryContext.queryKey[1];
   const finalOrderBy = (orderBy === 'start' || orderBy === 'start_date') ? 'distance' : orderBy;
@@ -69,46 +73,41 @@ export default function FestivalScreen() {
     })();
   }, []);
 
+  const handlePressFestival = (item) => {
+      const targetId = getFestivalId(item);
+      if (!targetId) return;
+
+      const formattedDistance = item.distance ? formatDistance(item.distance) : undefined;
+
+      const detailData = JSON.stringify({
+          festival: item,
+          distance: formattedDistance 
+      });
+
+      router.push({
+          pathname: `/festivals/${targetId}`, 
+          params: { 
+              data: detailData 
+          }
+      });
+  };
+
   const renderItem = ({ item }) => {
-    
-    // 1. BE에서 받은 거리 정보를 포맷합니다.
-    const formattedDistance = item.distance !== undefined && item.distance !== null 
-        ? formatDistance(item.distance) 
-        : undefined;
-
-    // 2. 상세 페이지로 보낼 데이터 (축제 객체 + 포맷된 거리)를 만듭니다.
-    const detailData = JSON.stringify({
-        festival: item,
-        distance: formattedDistance // 포맷된 거리 문자열을 전달
-    });
-
     return (
         <TouchableOpacity
             style={styles.card}
-            // onPress 시, URL 경로와 함께 데이터 객체를 파라미터로 전달합니다.
-            onPress={() => {
-                router.push({
-                    pathname: `/festivals/${item.id}`, // URL 경로는 id를 사용하지만
-                    params: { data: detailData }     // 실제 정보는 params.data에 담아 보냅니다.
-                });
-            }}
+            onPress={() => handlePressFestival(item)} 
         >
-            {/* BE가 보낸 'image_url'을 사용합니다. */}
             {item.image_url && item.image_url.length > 0 ? (
                 <Image source={{ uri: item.image_url }} style={styles.thumbnail} />
             ) : (
-                // image_url이 없거나 빈 문자열일 때 placeholder 렌더링
                 <View style={[styles.placeholder, styles.thumbnail]} /> 
             )}
             <View style={styles.cardContent}>
-                {/* BE가 보낸 'title'을 사용합니다. */}
                 <Text style={styles.name}>{item.title}</Text>
-                {/* BE가 보낸 'location'을 사용합니다. */}
-                <Text style={styles.address} numberOfLines={1}>📍 {item.location || '위치 정보 없음'}</Text>
-                {/* BE가 보낸 'event_start_date' ("YYYY-MM-DD")를 사용합니다. */}
-                <Text style={styles.date}>🗓 {`${item.event_start_date} ~ ${item.event_end_date}`}</Text>
+                <Text style={styles.address} numberOfLines={1}>📍 {item.location || item.addr1 || '위치 정보 없음'}</Text>
+                <Text style={styles.date}>🗓 {`${item.event_start_date || item.eventstartdate} ~ ${item.event_end_date || item.eventenddate}`}</Text>
                 
-                {/* 포맷된 거리 표시 (item.distance 대신 formattedDistance 사용 가능하지만, item.distance를 formatDistance로 처리하는 기존 방식 유지) */}
                 {item.distance !== undefined && item.distance !== null && (
                     <Text style={styles.distance}>
                         {formatDistance(item.distance)}
