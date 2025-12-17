@@ -42,6 +42,7 @@ export default function FestivalScreen() {
   //const navigation = useNavigation();
   const router = useRouter();
   const [location, setLocation] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
   const [viewMode, setViewMode] = useState('map');
   const DISTANCE_LIMIT_KM = 10;
   const [showOnlyNearby, setShowOnlyNearby] = useState(false);
@@ -63,13 +64,27 @@ export default function FestivalScreen() {
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.error('위치 권한이 거부되었습니다.');
-        return;
+      try {
+        // 1. 권한 요청
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        
+        // 2. 권한 거부 시 처리
+        if (status !== 'granted') {
+          setErrorMsg('위치 권한을 허용해야 내 주변 축제를 볼 수 있습니다.');
+           setLocation({
+             latitude: 37.5665,
+             longitude: 126.9780,
+           });
+          return;
+        }
+
+        // 3. 현재 위치 가져오기
+        let loc = await Location.getCurrentPositionAsync({});
+        setLocation(loc.coords);
+      } catch (error) {
+        console.error(error);
+        setErrorMsg('위치 정보를 가져오는 중 오류가 발생했습니다.');
       }
-      let loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc.coords);
     })();
   }, []);
 
@@ -119,17 +134,32 @@ export default function FestivalScreen() {
 };
 
   const renderContent = () => {
+    if (errorMsg && !location) {
+        return (
+            <View style={styles.centered}>
+                <Text style={styles.infoText}>{errorMsg}</Text>
+                <TouchableOpacity 
+                    onPress={() => Linking.openSettings()} // react-native에서 Linking import 필요
+                    style={{ marginTop: 20, padding: 10, backgroundColor: '#ddd', borderRadius: 8 }}
+                >
+                    <Text>설정으로 이동</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
     const validFestivals = festivals?.filter(f => 
         f.mapx && f.mapy && 
         !isNaN(parseFloat(f.mapx)) && 
         !isNaN(parseFloat(f.mapy))
     );
+
+    // isLoading 체크 전에 location이 있는지 확인
     if (isLoading || !location) {
       return (
         <View style={styles.centered}>
           <ActivityIndicator size="large" />
           <Text style={styles.infoText}>
-            {/* BE가 1077건을 처리하므로 시간이 좀 걸립니다. */}
             2025년 축제 목록을 실시간으로 불러오는 중...
           </Text>
         </View>
